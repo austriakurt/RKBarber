@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npx vite build",
+  "outputDirectory": "dist/public",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "crons": [
+    { "path": "/api/cron/send-reservation-reminders", "schedule": "0 10 * * *" }
+  ],
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
