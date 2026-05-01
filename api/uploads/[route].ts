@@ -5,7 +5,7 @@ const ALLOWED_UPLOAD_HOSTS = new Set([
 ]);
 
 function isValidUploadPayload(payload: any): payload is ImageUploadPayload {
-  const folderOk = !payload?.folder || ["gcash", "proofs", "barbers"].includes(String(payload.folder));
+  const folderOk = !payload?.folder || ["gcash", "proofs", "barbers", "gallery"].includes(String(payload.folder));
   return (
     payload &&
     typeof payload.dataUrl === "string" &&
