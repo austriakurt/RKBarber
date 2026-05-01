@@ -1139,7 +1139,7 @@ export async function registerRoutes(
         updates.completionConfirmedAt = "";
         updates.completedBy = "";
         updates.forceCompletedAt = "";
-        notificationStatus = "confirmed";
+        notificationStatus = "approved";
       } else if (parsed.data.status === "cancelled") {
         updates.customerDecision = "cancelled";
         updates.customerDecisionAt = nowIso;

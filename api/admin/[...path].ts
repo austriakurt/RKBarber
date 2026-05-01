@@ -349,7 +349,7 @@ async function handleBookings(req: any, res: any, segments: string[]) {
       updates.completionConfirmedAt = '';
       updates.completedBy = '';
       updates.forceCompletedAt = '';
-      notificationStatus = 'confirmed';
+      notificationStatus = 'approved';
     } else if (status === 'cancelled') {
       updates.customerDecision = 'cancelled';
       updates.customerDecisionAt = nowIso;
