@@ -381,6 +381,7 @@ export function BookingModal({ open, onOpenChange, initialBarber }: BookingModal
         file,
         folder: "proofs",
         prefix: `booking-${Date.now()}`,
+        onCompress: () => toast({ title: `Compressed payment proof`, description: "File exceeded 3MB and was automatically compressed." })
       });
       setPaymentProofUrl(imageUrl);
       toast({ title: "Payment proof uploaded" });

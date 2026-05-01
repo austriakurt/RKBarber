@@ -586,7 +586,12 @@ function BarberDialog({
                     const file = e.target.files?.[0];
                     if (!file) return;
                     try {
-                      const url = await uploadImageFile({ file, folder: "barbers", prefix: `barber-${name || "profile"}` });
+                      const url = await uploadImageFile({ 
+                        file, 
+                        folder: "barbers", 
+                        prefix: `barber-${name || "profile"}`,
+                        onCompress: () => toast({ title: `Compressed image`, description: "File exceeded 3MB and was automatically compressed." })
+                      });
                       setImage(url);
                       toast({ title: "Image uploaded" });
                     } catch (err) {
@@ -1131,6 +1136,7 @@ export default function Admin() {
         file: processed.file,
         folder: "gcash",
         prefix: "shop-qr",
+        onCompress: () => toast({ title: `Compressed QR code`, description: "File exceeded 3MB and was automatically compressed." })
       });
       setGcashQrCodeUrl(uploaded);
       const normalizedGcashName = gcashName.trim();
@@ -2403,7 +2409,12 @@ export default function Admin() {
                         let uploaded = 0;
                         for (const file of files) {
                           try {
-                            const url = await uploadImageFile({ file, folder: "gallery", prefix: "hairstyle" });
+                            const url = await uploadImageFile({ 
+                              file, 
+                              folder: "gallery", 
+                              prefix: "hairstyle",
+                              onCompress: () => toast({ title: `Compressed ${file.name}`, description: "File exceeded 3MB and was automatically compressed." })
+                            });
                             await adminCreateGalleryItem({
                               imageUrl: url,
                               caption: "",
@@ -2412,7 +2423,8 @@ export default function Admin() {
                             });
                             uploaded++;
                           } catch (err) {
-                            toast({ title: `Failed: ${file.name}`, variant: "destructive" });
+                            const errMsg = err instanceof Error ? err.message : "Unknown error";
+                            toast({ title: `Failed: ${file.name}`, description: errMsg, variant: "destructive" });
                           }
                         }
                         if (uploaded > 0) toast({ title: `${uploaded} photo${uploaded > 1 ? "s" : ""} added to gallery` });

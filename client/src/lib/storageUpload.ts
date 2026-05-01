@@ -13,17 +13,58 @@ function validateImageFile(file: File): void {
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
     throw new Error("Only PNG, JPG, or WebP images are allowed");
   }
-  if (file.size > MAX_IMAGE_SIZE_BYTES) {
-    throw new Error("Image must be 3MB or smaller");
-  }
 }
 
-function toDataUrl(file: File): Promise<string> {
+function compressImage(file: File, onCompress?: () => void): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("Failed to read image file"));
-    reader.readAsDataURL(file);
+    if (file.size <= MAX_IMAGE_SIZE_BYTES) {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Failed to read image file"));
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    if (onCompress) onCompress();
+
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement("canvas");
+      let { width, height } = img;
+
+      const MAX_DIM = 2048;
+      if (width > MAX_DIM || height > MAX_DIM) {
+        if (width > height) {
+          height = Math.round((height * MAX_DIM) / width);
+          width = MAX_DIM;
+        } else {
+          width = Math.round((width * MAX_DIM) / height);
+          height = MAX_DIM;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas rendering context not supported"));
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      // WebP provides excellent compression, 0.7 is a good balance
+      const dataUrl = canvas.toDataURL("image/webp", 0.7);
+      
+      // We could check if it's STILL > 3MB (base64 size), but 2048x2048 at 0.7 WebP is virtually guaranteed to be < 1MB
+      resolve(dataUrl);
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load image for compression"));
+    };
+    
+    img.src = url;
   });
 }
 
@@ -31,12 +72,14 @@ export async function uploadImageFile(params: {
   file: File;
   folder: "gcash" | "proofs" | "barbers" | "gallery";
   prefix: string;
+  onCompress?: () => void;
 }): Promise<string> {
-  const { file, folder, prefix } = params;
+  const { file, folder, prefix, onCompress } = params;
   validateImageFile(file);
 
   const safeFileName = sanitizeFileName(file.name || "image");
-  const dataUrl = await toDataUrl(file);
+  const dataUrl = await compressImage(file, onCompress);
+  
   const response = await fetch("/api/uploads/image", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
