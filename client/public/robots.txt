@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://rk-barber.vercel.app/sitemap.xml
