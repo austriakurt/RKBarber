@@ -318,17 +318,7 @@ async function handleBookings(req: any, res: any, segments: string[]) {
     if (date.length > 0) updates.date = date;
     if (time.length > 0) updates.time = time;
 
-    if (status === 'completed' && existing.type === 'reservation' && existing.customerDecision !== 'accepted') {
-      const eligibleAtRaw = String(existing.customerActionDeadline || '').trim();
-      const eligibleAtMs = eligibleAtRaw ? Date.parse(eligibleAtRaw) : Number.NaN;
-      const nowMs = Date.now();
-      if (existing.customerActionRequired === true && Number.isFinite(eligibleAtMs) && nowMs < eligibleAtMs) {
-        res.status(409).json({
-          message: 'Client completion is still pending. Force-complete becomes available after the configured waiting time.',
-        });
-        return;
-      }
-    }
+
     if (status === 'confirmed' && existing.type === 'reservation' && String(existing.status || '') === 'completed') {
       res.status(409).json({ message: 'Completed bookings cannot be moved back to confirmed.' });
       return;
@@ -350,52 +340,16 @@ async function handleBookings(req: any, res: any, segments: string[]) {
       updates.forceCompletedAt = '';
       notificationStatus = 'rescheduled';
     } else if (status === 'confirmed') {
-      const completionToken = createActionToken();
-      const forceEligibleAt = getForceCompleteEligibleAtIso(new Date());
       updates.customerDecision = 'accepted';
       updates.customerDecisionAt = nowIso;
-      updates.customerActionRequired = true;
-      updates.customerActionDeadline = forceEligibleAt;
-      updates.customerTokenHash = hashActionToken(completionToken);
-      updates.completionRequestedAt = nowIso;
+      updates.customerActionRequired = false;
+      updates.customerActionDeadline = '';
+      updates.customerTokenHash = '';
+      updates.completionRequestedAt = '';
       updates.completionConfirmedAt = '';
       updates.completedBy = '';
       updates.forceCompletedAt = '';
-
-      const toEmail = String(existing.email || '').trim();
-      if (toEmail.includes('@')) {
-        const html = buildBookingCompletionRequestEmailHtml({
-          baseUrl: getBaseUrl(req),
-          token: completionToken,
-          bookingId: id,
-          customerName: String(existing.customerName || 'Customer'),
-          serviceName: String(existing.serviceName || ''),
-          barberName: String(existing.barberName || ''),
-          date: date.length > 0 ? date : String(existing.date || ''),
-          time: time.length > 0 ? time : String(existing.time || ''),
-          price: Number(existing.price || 0),
-        });
-
-        let emailResult: { sent: boolean; reason?: string } = { sent: false, reason: 'Completion email not sent' };
-        try {
-          emailResult = await sendBookingActionEmail({
-            to: toEmail,
-            subject: getBookingCompletionRequestEmailSubject(),
-            html,
-          });
-        } catch (error) {
-          emailResult = {
-            sent: false,
-            reason: error instanceof Error ? error.message : 'Failed to send completion request email',
-          };
-        }
-
-        updates.emailNotificationSent = emailResult.sent;
-        updates.emailNotificationError = emailResult.reason || '';
-      } else {
-        updates.emailNotificationSent = false;
-        updates.emailNotificationError = 'Missing client email for completion request';
-      }
+      notificationStatus = 'confirmed';
     } else if (status === 'cancelled') {
       updates.customerDecision = 'cancelled';
       updates.customerDecisionAt = nowIso;
@@ -409,16 +363,12 @@ async function handleBookings(req: any, res: any, segments: string[]) {
       notificationStatus = 'cancelled';
     } else if (status === 'completed') {
       if (existing.type === 'reservation') {
-        const eligibleAtRaw = String(existing.customerActionDeadline || '').trim();
-        const eligibleAtMs = eligibleAtRaw ? Date.parse(eligibleAtRaw) : Number.NaN;
-        const canForceComplete =
-          existing.customerActionRequired === true && Number.isFinite(eligibleAtMs) && Date.now() >= eligibleAtMs;
         updates.customerActionRequired = false;
         updates.customerTokenHash = '';
         updates.customerActionDeadline = '';
         updates.completionConfirmedAt = nowIso;
-        updates.completedBy = canForceComplete ? 'admin' : String(existing.completedBy || 'client') || 'admin';
-        updates.forceCompletedAt = canForceComplete ? nowIso : '';
+        updates.completedBy = 'admin';
+        updates.forceCompletedAt = '';
       }
       notificationStatus = 'completed';
     }
