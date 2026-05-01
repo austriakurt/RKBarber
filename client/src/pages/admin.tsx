@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader,
   DialogTitle, DialogFooter, DialogDescription,
+  DialogPortal,
 } from "@/components/ui/dialog";
 import {
   ContextMenu, ContextMenuTrigger, ContextMenuContent,
