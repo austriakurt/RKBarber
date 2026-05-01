@@ -200,13 +200,14 @@ function DeleteDialog({
 // Service dialog (add / edit)
 // ─────────────────────────────────────────────────────────
 function ServiceDialog({
-  open, onOpenChange, service, onSaved, availableServices,
+  open, onOpenChange, service, onSaved, availableServices, setIsProcessing,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   service: Service | null;
   onSaved: () => void;
   availableServices: Service[];
+  setIsProcessing: (v: boolean) => void;
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -241,6 +242,7 @@ function ServiceDialog({
       toast({ title: "Choose at least one solo service for a package", variant: "destructive" });
       return;
     }
+    setIsProcessing(true);
     setSaving(true);
     try {
       const walkin = noPrice ? 0 : Number(walkinPrice);
@@ -270,6 +272,7 @@ function ServiceDialog({
       toast({ title: "Error saving service", variant: "destructive" });
     } finally {
       setSaving(false);
+      setIsProcessing(false);
     }
   };
 
@@ -432,19 +435,21 @@ function to12Hour(time24: string): string {
 // Barber dialog (add / edit) — services multi-select, pre-fill fixed
 // ─────────────────────────────────────────────────────────
 function BarberDialog({
-  open, onOpenChange, barber, onSaved, availableServices,
+  open, onOpenChange, barber, onSaved, availableServices, setIsProcessing,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   barber: Barber | null;
   onSaved: () => void;
   availableServices: Service[];
+  setIsProcessing: (v: boolean) => void;
 }) {
   const [name, setName] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [reservePrice, setReservePrice] = useState("");
   const [walkinPrice, setWalkinPrice] = useState("");
   const [image, setImage] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [availableFrom, setAvailableFrom] = useState("9:00 AM");
   const [availableTo, setAvailableTo] = useState("8:00 PM");
   const [availableDays, setAvailableDays] = useState<string[]>([...DAYS_OF_WEEK]);
@@ -462,6 +467,7 @@ function BarberDialog({
       setReservePrice(String(barber?.reservePrice || ""));
       setWalkinPrice(String(barber?.walkinPrice || ""));
       setImage(barber?.image || "");
+      setImageFile(null);
       setAvailableFrom(barber?.availableFrom || "9:00 AM");
       setAvailableTo(barber?.availableTo || "8:00 PM");
       setAvailableDays(barber?.availableDays || [...DAYS_OF_WEEK]);
@@ -477,8 +483,18 @@ function BarberDialog({
 
   const handleSave = async () => {
     if (!name) return;
+    setIsProcessing(true);
     setSaving(true);
     try {
+      let finalImageUrl = image;
+      if (imageFile) {
+        finalImageUrl = await uploadImageFile({
+          file: imageFile,
+          folder: "barbers",
+          prefix: name.toLowerCase().replace(/\s+/g, "-"),
+          onCompress: () => toast({ title: `Image compressed`, description: "The image was larger than 3MB and was automatically optimized for faster loading." })
+        });
+      }
       // derive specialty string from chosen service names for display
       const specialty = availableServices
         .filter((s) => selectedServices.includes(s.id))
@@ -489,7 +505,7 @@ function BarberDialog({
         services: selectedServices,
         reservePrice: Number(reservePrice),
         walkinPrice: Number(walkinPrice),
-        image,
+        image: finalImageUrl,
         active: barber?.active ?? true,
         order: barber?.order ?? Date.now(),
         availableDays, availableFrom, availableTo,
@@ -508,6 +524,7 @@ function BarberDialog({
       toast({ title: "Error saving barber", variant: "destructive" });
     } finally {
       setSaving(false);
+      setIsProcessing(false);
     }
   };
 
@@ -567,42 +584,29 @@ function BarberDialog({
 
           <div className="space-y-1.5">
             <Label>Profile Image</Label>
-            {image && (
+            {(image || imageFile) && (
               <div className="mb-2">
-                <img src={image} alt="Barber preview" className="w-16 h-16 rounded-full object-cover border-2 border-border/50" />
+                <img src={imageFile ? URL.createObjectURL(imageFile) : image} alt="Barber preview" className="w-16 h-16 rounded-full object-cover border-2 border-border/50" />
               </div>
             )}
             <div className="flex items-center gap-2">
               <label className="flex-1 cursor-pointer">
                 <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:bg-muted/40 transition-colors text-sm text-muted-foreground">
                   <Upload className="w-4 h-4" />
-                  <span>{image ? "Change Image" : "Upload Image"}</span>
+                  <span>{image || imageFile ? "Change Image" : "Upload Image"}</span>
                 </div>
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
                   className="hidden"
-                  onChange={async (e) => {
+                  onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      const url = await uploadImageFile({ 
-                        file, 
-                        folder: "barbers", 
-                        prefix: `barber-${name || "profile"}`,
-                        onCompress: () => toast({ title: `Compressed image`, description: "File exceeded 3MB and was automatically compressed." })
-                      });
-                      setImage(url);
-                      toast({ title: "Image uploaded" });
-                    } catch (err) {
-                      toast({ title: err instanceof Error ? err.message : "Upload failed", variant: "destructive" });
-                    }
-                    e.target.value = "";
+                    if (file) setImageFile(file);
                   }}
                 />
               </label>
-              {image && (
-                <Button type="button" variant="ghost" size="sm" className="h-10 text-red-500 hover:bg-red-500/10" onClick={() => setImage("")}>
+              {(image || imageFile) && (
+                <Button type="button" variant="ghost" size="sm" className="h-10 text-red-500 hover:bg-red-500/10" onClick={() => { setImage(""); setImageFile(null); }}>
                   <X className="w-4 h-4" />
                 </Button>
               )}
@@ -1065,6 +1069,7 @@ export default function Admin() {
   const { settings } = useSettings();
   const { gallery: galleryItems } = useGallery();
   const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Settings form state
   const [shopName, setShopName] = useState("");
@@ -1242,12 +1247,15 @@ export default function Admin() {
   };
 
   const handleBookingStatus = async (id: string, status: "confirmed" | "cancelled" | "completed") => {
+    setIsProcessing(true);
     try {
       await adminUpdateBookingStatus(id, status);
       toast({ title: `Booking marked as ${status}` });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to update booking status";
       toast({ title: message, variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1279,6 +1287,7 @@ export default function Admin() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    setIsProcessing(true);
     setDeleteLoading(true);
     try {
       if (deleteTarget.type === "barber") await adminDeleteBarber(deleteTarget.id);
@@ -1290,6 +1299,7 @@ export default function Admin() {
       toast({ title: "Delete failed", variant: "destructive" });
     } finally {
       setDeleteLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -1460,6 +1470,7 @@ export default function Admin() {
         service={editService === "new" ? null : editService}
         onSaved={() => setEditService(null)}
         availableServices={services}
+        setIsProcessing={setIsProcessing}
       />
 
       <BarberDialog
@@ -1468,6 +1479,7 @@ export default function Admin() {
         barber={editBarber === "new" ? null : editBarber}
         onSaved={() => setEditBarber(null)}
         availableServices={services}
+        setIsProcessing={setIsProcessing}
       />
 
       <Dialog
@@ -2702,6 +2714,7 @@ export default function Admin() {
                   className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto h-11"
                   disabled={settingsSaving}
                   onClick={async () => {
+                    setIsProcessing(true);
                     setSettingsSaving(true);
                     try {
                       const normalizedGcashName = gcashName.trim();
@@ -2733,6 +2746,7 @@ export default function Admin() {
                       toast({ title: "Failed to save settings", variant: "destructive" });
                     } finally {
                       setSettingsSaving(false);
+                      setIsProcessing(false);
                     }
                   }}
                 >
@@ -2755,6 +2769,20 @@ export default function Admin() {
           )}
         </div>
       </main>
+
+      {/* Global Processing Overlay */}
+      {isProcessing && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
+          <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-200">
+            <div className="relative">
+              <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+              <Loader2 className="w-6 h-6 text-primary animate-pulse absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+            </div>
+            <p className="font-heading font-bold text-lg tracking-wide">Processing...</p>
+            <p className="text-xs text-muted-foreground">Please wait a moment</p>
+          </div>
+        </div>
+      )}
     </AmbientPageBackground>
   );
 }
