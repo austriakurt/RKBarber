@@ -7,6 +7,8 @@ import { QueueModal } from "@/components/queue/QueueModal";
 import { BookingModal } from "@/components/booking/BookingModal";
 import { useBarbers, useQueue, useSettings, useServices, useGallery, useTodayBookings } from "@/hooks/useFirestore";
 import { Button } from "@/components/ui/button";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import AutoScroll from "embla-carousel-auto-scroll";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Clock, CheckCircle2, Scissors,
@@ -163,6 +165,57 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Gallery Carousel ────────────────────────────────── */}
+      {gallery.length > 0 && (
+        <section className="py-20 md:py-28 bg-background border-b border-border/30 overflow-hidden">
+          <div className="container mx-auto px-4 md:px-6 mb-10">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="text-center"
+            >
+              <h2 className="text-3xl md:text-4xl font-bold font-heading mb-2">Our Work</h2>
+              <p className="text-muted-foreground">Swipe or drag to browse hairstyles groomed by our barbers</p>
+            </motion.div>
+          </div>
+          <div className="relative">
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+                dragFree: true,
+              }}
+              plugins={[AutoScroll({ speed: 1.2, stopOnInteraction: false, stopOnMouseEnter: true })]}
+              className="w-full"
+            >
+              <CarouselContent className="ml-0 gap-4">
+                {(() => {
+                  const displayGallery = gallery.length < 10 
+                    ? Array(Math.ceil(10 / gallery.length)).fill(gallery).flat() 
+                    : gallery;
+                  return displayGallery.map((item, i) => {
+                    const bName = barbers.find((b) => b.id === item.barberId)?.name || "";
+                    return (
+                      <CarouselItem key={`${item.id}-${i}`} className="pl-0 basis-auto first:pl-4">
+                        <div className="group shrink-0 w-64 h-64 md:w-80 md:h-80 rounded-2xl overflow-hidden border border-border/30 shadow-lg relative cursor-grab active:cursor-grabbing select-none">
+                          <img src={item.imageUrl} alt={item.hairstyleName || "Hairstyle"} className="w-full h-full object-cover pointer-events-none group-hover:scale-105 transition-transform duration-500" draggable={false} />
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 py-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none">
+                            <p className="text-sm text-white font-bold truncate">{item.hairstyleName || "Hairstyle"}</p>
+                            {bName && <p className="text-xs text-white/70 truncate">by {bName}</p>}
+                          </div>
+                        </div>
+                      </CarouselItem>
+                    );
+                  });
+                })()}
+              </CarouselContent>
+            </Carousel>
+          </div>
+        </section>
+      )}
+
       {/* ── About ──────────────────────────────────────────── */}
       <section id="about" className="py-20 md:py-28 bg-card border-b border-border/30">
         <div className="container mx-auto px-4 md:px-6">
@@ -203,52 +256,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* ── Gallery Carousel ────────────────────────────────── */}
-      {gallery.length > 0 && (
-        <section className="py-20 md:py-28 bg-background border-b border-border/30 overflow-hidden">
-          <div className="container mx-auto px-4 md:px-6 mb-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="text-center"
-            >
-              <h2 className="text-3xl md:text-4xl font-bold font-heading mb-2">Our Work</h2>
-              <p className="text-muted-foreground">Hairstyles groomed by our barbers</p>
-            </motion.div>
-          </div>
-          <div className="relative">
-            <div className="flex gap-4 animate-scroll-left">
-              {[...gallery, ...gallery].map((item, i) => {
-                const bName = barbers.find((b) => b.id === item.barberId)?.name || "";
-                return (
-                  <div key={`${item.id}-${i}`} className="group shrink-0 w-64 h-64 md:w-80 md:h-80 rounded-2xl overflow-hidden border border-border/30 shadow-lg relative">
-                    <img src={item.imageUrl} alt={item.hairstyleName || "Hairstyle"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 py-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                      <p className="text-sm text-white font-bold truncate">{item.hairstyleName || "Hairstyle"}</p>
-                      {bName && <p className="text-xs text-white/70 truncate">by {bName}</p>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <style>{`
-            @keyframes scroll-left {
-              0% { transform: translateX(0); }
-              100% { transform: translateX(-50%); }
-            }
-            .animate-scroll-left {
-              animation: scroll-left ${Math.max(gallery.length * 5, 20)}s linear infinite;
-            }
-            .animate-scroll-left:hover {
-              animation-play-state: paused;
-            }
-          `}</style>
-        </section>
-      )}
 
       {/* ── Footer ─────────────────────────────────────────── */}
       <footer className="py-8 pb-24 md:pb-8 border-t border-border/30 bg-background">
