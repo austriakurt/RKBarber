@@ -201,7 +201,7 @@ export default function Home() {
                       <CarouselItem key={`${item.id}-${i}`} className="pl-0 basis-auto first:pl-4">
                         <div className="group shrink-0 w-64 h-64 md:w-80 md:h-80 rounded-2xl overflow-hidden border border-border/30 shadow-lg relative cursor-grab active:cursor-grabbing select-none">
                           <img src={item.imageUrl} alt={item.hairstyleName || "Hairstyle"} className="w-full h-full object-cover pointer-events-none group-hover:scale-105 transition-transform duration-500" draggable={false} />
-                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 py-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none">
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-4 py-3 translate-y-0 md:translate-y-full md:group-hover:translate-y-0 transition-transform duration-300 pointer-events-none">
                             <p className="text-sm text-white font-bold truncate">{item.hairstyleName || "Hairstyle"}</p>
                             {bName && <p className="text-xs text-white/70 truncate">by {bName}</p>}
                           </div>
