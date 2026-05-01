@@ -2772,16 +2772,18 @@ export default function Admin() {
 
       {/* Global Processing Overlay */}
       {isProcessing && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
-          <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-200">
-            <div className="relative">
-              <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-              <Loader2 className="w-6 h-6 text-primary animate-pulse absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+        <DialogPortal>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
+            <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-200">
+              <div className="relative">
+                <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                <Loader2 className="w-6 h-6 text-primary animate-pulse absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              </div>
+              <p className="font-heading font-bold text-lg tracking-wide">Processing...</p>
+              <p className="text-xs text-muted-foreground">Please wait a moment</p>
             </div>
-            <p className="font-heading font-bold text-lg tracking-wide">Processing...</p>
-            <p className="text-xs text-muted-foreground">Please wait a moment</p>
           </div>
-        </div>
+        </DialogPortal>
       )}
     </AmbientPageBackground>
   );
