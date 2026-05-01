@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { Barber, Service } from "@/lib/types";
+import { getBarberSpecialty } from "@/lib/types";
 import { addToQueue, getQueue } from "@/lib/firestore";
 import { createPublicBooking } from "@/lib/bookingApi";
 import { useBarbers, useBookings, useServices, useQueue, useSettings } from "@/hooks/useFirestore";
@@ -576,8 +577,8 @@ export function BookingModal({ open, onOpenChange, initialBarber }: BookingModal
                           </div>
                           <div className="text-center">
                             <p className="font-semibold text-sm">{barber.name}</p>
-                            {barber.specialty && (
-                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{barber.specialty}</p>
+                            {getBarberSpecialty(barber, services) && (
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{getBarberSpecialty(barber, services)}</p>
                             )}
                             <p className="text-xs text-muted-foreground/70 mt-1">
                               {(barber.availableDays || DAY_NAMES.slice(1)).map((d) => d.slice(0, 2)).join(" · ")}

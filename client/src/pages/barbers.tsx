@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/Navbar";
 import { AmbientPageBackground } from "@/components/layout/AmbientPageBackground";
 import { BookingModal } from "@/components/booking/BookingModal";
-import { useBarbers } from "@/hooks/useFirestore";
+import { useBarbers, useServices } from "@/hooks/useFirestore";
 import type { Barber } from "@/lib/types";
+import { getBarberSpecialty } from "@/lib/types";
 import LogoImg from "@assets/rkbarber-logo-transparent.png";
 
 const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -33,6 +34,7 @@ function isBarberAvailableNow(barber: Barber): boolean {
 
 export default function BarbersPage() {
   const { barbers, loading } = useBarbers();
+  const { services } = useServices();
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
 
@@ -124,8 +126,8 @@ export default function BarbersPage() {
 
                   <div className="p-6 flex flex-col flex-1">
                     <h3 className="text-xl font-bold font-heading mb-1">{barber.name}</h3>
-                    {barber.specialty && (
-                      <p className="text-sm text-muted-foreground mb-4">{barber.specialty}</p>
+                    {getBarberSpecialty(barber, services) && (
+                      <p className="text-sm text-muted-foreground mb-4">{getBarberSpecialty(barber, services)}</p>
                     )}
 
                     {/* Availability */}

@@ -52,7 +52,7 @@ import {
 } from "@/lib/adminApi";
 import { useToast } from "@/hooks/use-toast";
 import type { Barber, Service, Booking } from "@/lib/types";
-import { DAYS_OF_WEEK } from "@/lib/types";
+import { DAYS_OF_WEEK, getBarberSpecialty } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { downloadImageInApp } from "@/lib/fileDownload";
 import jsQR from "jsqr";
@@ -1904,7 +1904,7 @@ export default function Admin() {
                                 </div>
                                 <div>
                                   <h3 className="font-bold">{b.name}</h3>
-                                  {b.specialty && <p className="text-xs text-muted-foreground truncate max-w-[140px]">{b.specialty}</p>}
+                                  {getBarberSpecialty(b, services) && <p className="text-xs text-muted-foreground truncate max-w-[140px]">{getBarberSpecialty(b, services)}</p>}
                                   <Badge variant={b.active ? "default" : "secondary"} className="text-xs mt-1">{b.active ? "Active" : "Inactive"}</Badge>
                                 </div>
                               </div>

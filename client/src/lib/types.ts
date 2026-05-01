@@ -125,6 +125,20 @@ export interface ShopSettings {
   combo2ReservationPrice?: number;
 }
 
+/**
+ * Derive a barber's specialty display string from their selected service IDs.
+ * Falls back to the stored `barber.specialty` if no services are matched.
+ */
+export function getBarberSpecialty(barber: Barber, services: Service[]): string {
+  if (barber.services && barber.services.length > 0 && services.length > 0) {
+    const names = barber.services
+      .map((sid) => services.find((s) => s.id === sid)?.name)
+      .filter(Boolean) as string[];
+    if (names.length > 0) return names.join(", ");
+  }
+  return barber.specialty || "";
+}
+
 export const COLLECTIONS = {
   BARBERS: "barbers",
   BOOKINGS: "bookings",
