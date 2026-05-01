@@ -1131,6 +1131,7 @@ export default function Admin() {
   }, [settings]);
 
   const handleGcashQrUpload = async (file: File) => {
+    setIsProcessing(true);
     setGcashQrUploading(true);
     try {
       const processed = await autoCropGcashQrFile(file);
@@ -1164,6 +1165,7 @@ export default function Admin() {
       toast({ title: message, variant: "destructive" });
     } finally {
       setGcashQrUploading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -1263,8 +1265,15 @@ export default function Admin() {
   const handleConfirmAllPending = async () => {
     const pending = allBookings.filter((b) => b.status === "pending");
     if (pending.length === 0) return;
-    await Promise.all(pending.map((b) => adminUpdateBookingStatus(b.id, "confirmed")));
-    toast({ title: `${pending.length} booking${pending.length > 1 ? "s" : ""} confirmed` });
+    setIsProcessing(true);
+    try {
+      await Promise.all(pending.map((b) => adminUpdateBookingStatus(b.id, "confirmed")));
+      toast({ title: `${pending.length} booking${pending.length > 1 ? "s" : ""} confirmed` });
+    } catch {
+      toast({ title: "Failed to confirm bookings", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleQueueNext = async (barberId: string) => {
@@ -1272,11 +1281,19 @@ export default function Admin() {
     const inProgress = bq.find((q) => q.status === "in-progress");
     const next = bq.find((q) => q.status === "waiting");
 
-    // Direct Firestore writes for instant UI update via onSnapshot
-    if (inProgress) await removeFromQueue(inProgress.id);
-    if (next) await updateQueueItem(next.id, { status: "in-progress" });
+    setIsProcessing(true);
+    try {
+      // Direct Firestore writes for instant UI update via onSnapshot
+      if (inProgress) await removeFromQueue(inProgress.id);
+      if (next) await updateQueueItem(next.id, { status: "in-progress" });
 
-    toast({ title: next ? `${next.customerName} is now in chair` : "Queue advanced" });
+      toast({ title: next ? `${next.customerName} is now in chair` : "Queue advanced" });
+    } catch {
+      toast({ title: "Failed to advance queue", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
     // Fire-and-forget: call server to send email notifications (don't await)
     adminCallNextInQueue(barberId).then((result) => {
