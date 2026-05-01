@@ -2772,7 +2772,7 @@ export default function Admin() {
       </main>
 
       {/* Global Processing Overlay */}
-      {isProcessing && (
+      <Dialog open={isProcessing}>
         <DialogPortal>
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
             <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-200">
@@ -2785,7 +2785,7 @@ export default function Admin() {
             </div>
           </div>
         </DialogPortal>
-      )}
+      </Dialog>
     </AmbientPageBackground>
   );
 }
