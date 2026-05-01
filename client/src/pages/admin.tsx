@@ -2174,6 +2174,24 @@ export default function Admin() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {barbers.filter((b) => b.active).map((barber) => {
                     const bq = activeQueue.filter((q) => q.barberId === barber.id).sort((a, c) => a.position - c.position);
+                    const bb = todayBookings
+                      .filter(b => b.barberId === barber.id && b.type === "reservation" && (b.status === "pending" || b.status === "confirmed"))
+                      .sort((a, b) => {
+                        const parseTimeStr = (tStr: string) => {
+                          if (!tStr) return 0;
+                          const match = tStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+                          if (!match) return 0;
+                          let h = parseInt(match[1], 10);
+                          const m = parseInt(match[2], 10);
+                          const period = match[3]?.toUpperCase();
+                          if (period === "PM" && h !== 12) h += 12;
+                          if (period === "AM" && h === 12) h = 0;
+                          return (h || 0) * 60 + (m || 0);
+                        };
+                        return parseTimeStr(a.time) - parseTimeStr(b.time);
+                      });
+                    const totalItems = bq.length + bb.length;
+
                     return (
                       <div key={barber.id} className="bg-card rounded-2xl border border-border/50 overflow-hidden">
                         <div className="p-4 border-b border-border/50 bg-muted/20 flex items-center justify-between">
@@ -2183,41 +2201,75 @@ export default function Admin() {
                             </div>
                             <h3 className="font-bold text-sm">{barber.name}</h3>
                           </div>
-                          <Badge variant="outline" className="text-xs">{bq.length} waiting</Badge>
+                          <Badge variant="outline" className="text-xs">{totalItems} in queue</Badge>
                         </div>
                         <div className="p-4 space-y-2 min-h-[80px]">
-                          {bq.length === 0 ? (
-                            <p className="text-xs text-muted-foreground text-center py-4">No customers in queue</p>
-                          ) : bq.map((item) => (
-                            <ContextMenu key={item.id}>
-                              <ContextMenuTrigger asChild>
-                                <div className={cn("flex items-center justify-between p-2.5 rounded-xl border text-sm transition-colors hover:bg-accent/20 cursor-default", item.status === "in-progress" ? "border-primary/50 bg-primary/5" : "border-border/30 bg-background/50")}>
+                          {totalItems === 0 ? (
+                            <p className="text-xs text-muted-foreground text-center py-4">No customers or reservations</p>
+                          ) : (
+                            <>
+                              {/* Walk-ins */}
+                              {bq.map((item) => (
+                                <ContextMenu key={item.id}>
+                                  <ContextMenuTrigger asChild>
+                                    <div className={cn("flex items-center justify-between p-2.5 rounded-xl border text-sm transition-colors hover:bg-accent/20 cursor-default", item.status === "in-progress" ? "border-primary/50 bg-primary/5" : "border-border/30 bg-background/50")}>
+                                      <div className="flex items-center gap-2.5">
+                                        <span className={cn("w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold", item.status === "in-progress" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                                          {item.position}
+                                        </span>
+                                        <div>
+                                          <p className="font-medium text-xs">{item.customerName}</p>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Walk-in</span>
+                                            {item.status === "in-progress" && <p className="text-[10px] text-primary flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" /> In Chair</p>}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <Button size="sm" variant="ghost" className="text-red-500 h-7 w-7 p-0 hover:bg-red-500/10" onClick={() => adminRemoveFromQueue(item.id).then(() => toast({ title: "Removed from queue" }))}>
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </div>
+                                  </ContextMenuTrigger>
+                                  <ContextMenuContent className="w-44">
+                                    <ContextMenuItem onClick={() => handleQueueNext(barber.id)}>
+                                      Call Next in Line
+                                    </ContextMenuItem>
+                                    <ContextMenuSeparator />
+                                    <ContextMenuItem className="text-red-500 focus:text-red-500 focus:bg-red-500/10"
+                                      onClick={() => adminRemoveFromQueue(item.id).then(() => toast({ title: "Removed from queue" }))}>
+                                      <Trash2 className="w-4 h-4 mr-2" /> Remove
+                                    </ContextMenuItem>
+                                  </ContextMenuContent>
+                                </ContextMenu>
+                              ))}
+
+                              {/* Reservations */}
+                              {bb.map((booking) => (
+                                <div 
+                                  key={booking.id}
+                                  className="flex items-center justify-between p-2.5 rounded-xl border text-sm transition-colors cursor-default border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10"
+                                >
                                   <div className="flex items-center gap-2.5">
-                                    <span className={cn("w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold", item.status === "in-progress" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                                      {item.position}
+                                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-blue-500/10 text-blue-500">
+                                      <Calendar className="w-3.5 h-3.5" />
                                     </span>
                                     <div>
-                                      <p className="font-medium text-xs">{item.customerName}</p>
-                                      {item.status === "in-progress" && <p className="text-xs text-primary flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" /> In Chair</p>}
+                                      <p className="font-medium text-xs">{booking.customerName}</p>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[10px] uppercase font-bold text-blue-500 tracking-wider">Reservation</span>
+                                        <span className="text-[10px] text-blue-500 font-medium bg-blue-500/10 px-1.5 py-0.5 rounded-md">
+                                          {booking.time}
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
-                                  <Button size="sm" variant="ghost" className="text-red-500 h-7 w-7 p-0 hover:bg-red-500/10" onClick={() => adminRemoveFromQueue(item.id).then(() => toast({ title: "Removed from queue" }))}>
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                  <Button size="sm" variant="ghost" className="text-blue-500 h-7 w-7 p-0 hover:bg-blue-500/20" title="View Details" onClick={() => { setActiveTab("dashboard"); setTimeout(() => setViewBooking(booking), 100); }}>
+                                    <Eye className="w-3.5 h-3.5" />
                                   </Button>
                                 </div>
-                              </ContextMenuTrigger>
-                              <ContextMenuContent className="w-44">
-                                <ContextMenuItem onClick={() => handleQueueNext(barber.id)}>
-                                  Call Next in Line
-                                </ContextMenuItem>
-                                <ContextMenuSeparator />
-                                <ContextMenuItem className="text-red-500 focus:text-red-500 focus:bg-red-500/10"
-                                  onClick={() => adminRemoveFromQueue(item.id).then(() => toast({ title: "Removed from queue" }))}>
-                                  <Trash2 className="w-4 h-4 mr-2" /> Remove
-                                </ContextMenuItem>
-                              </ContextMenuContent>
-                            </ContextMenu>
-                          ))}
+                              ))}
+                            </>
+                          )}
                         </div>
                         <div className="p-4 pt-0">
                           <Button size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => handleQueueNext(barber.id)} disabled={bq.length === 0}>

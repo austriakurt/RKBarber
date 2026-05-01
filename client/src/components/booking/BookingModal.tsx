@@ -26,12 +26,16 @@ import { downloadImageInApp } from "@/lib/fileDownload";
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 function generateTimeslots(from: string, to: string): string[] {
   const slots: string[] = [];
-  const parseTime = (t: string) => {
-    const [time, period] = t.split(" ");
-    let [h, m] = time.split(":").map(Number);
+  const parseTime = (tStr: string) => {
+    if (!tStr) return 0;
+    const match = tStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (!match) return 0;
+    let h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    const period = match[3]?.toUpperCase();
     if (period === "PM" && h !== 12) h += 12;
     if (period === "AM" && h === 12) h = 0;
-    return h * 60 + m;
+    return (h || 0) * 60 + (m || 0);
   };
   const formatTime = (mins: number) => {
     const h = Math.floor(mins / 60);
@@ -42,7 +46,7 @@ function generateTimeslots(from: string, to: string): string[] {
   };
   const start = parseTime(from || "9:00 AM");
   const end = parseTime(to || "8:00 PM");
-  for (let t = start; t < end; t += 30) slots.push(formatTime(t));
+  for (let t = start; t < end; t += 60) slots.push(formatTime(t));
   return slots;
 }
 
@@ -275,28 +279,74 @@ export function BookingModal({ open, onOpenChange, initialBarber }: BookingModal
   );
 
   const selectedDateKey = date ? format(date, "yyyy-MM-dd") : "";
-  const takenReservationSlots = useMemo(() => {
-    return new Set(
-      bookings
-        .filter((booking) =>
-          booking.type === "reservation" &&
-          booking.barberId === selectedBarber?.id &&
-          booking.date === selectedDateKey &&
-          (booking.status === "pending" || booking.status === "confirmed") &&
-          !!booking.time
-        )
-        .map((booking) => booking.time)
-    );
-  }, [bookings, selectedBarber?.id, selectedDateKey]);
+  const availableSlots = useMemo(() => {
+    if (type !== "reservation" || !date) return [];
+    
+    const parseTimeStr = (tStr: string) => {
+      if (!tStr) return 0;
+      const match = tStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+      if (!match) return 0;
+      let h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const period = match[3]?.toUpperCase();
+      if (period === "PM" && h !== 12) h += 12;
+      if (period === "AM" && h === 12) h = 0;
+      return (h || 0) * 60 + (m || 0);
+    };
 
-  const availableSlotCount = timeslots.length - takenReservationSlots.size;
+    const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+    const now = new Date();
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+
+    const dayBookings = bookings.filter((booking) =>
+      booking.type === "reservation" &&
+      booking.barberId === selectedBarber?.id &&
+      booking.date === selectedDateKey &&
+      (booking.status === "pending" || booking.status === "confirmed") &&
+      !!booking.time
+    );
+
+    const bookingIntervals = dayBookings.map(b => {
+      const bStart = parseTimeStr(b.time);
+      const bService = services.find(s => s.id === b.serviceId);
+      const bDuration = bService?.duration || 60;
+      return { start: bStart, end: bStart + bDuration };
+    });
+
+    const closeMins = parseTimeStr(selectedBarber?.availableTo || "8:00 PM");
+    const selDuration = selectedService?.duration || 60;
+
+    return timeslots.filter(t => {
+      const tMins = parseTimeStr(t);
+      
+      // 1. Past timeslots today are unavailable
+      if (isToday && tMins <= nowMins) return false;
+
+      // 2. Appointment must end before or at closing time
+      if (tMins + selDuration > closeMins) return false;
+
+      // 3. Overlap check with existing bookings
+      const newApptStart = tMins;
+      const newApptEnd = tMins + selDuration;
+
+      for (const interval of bookingIntervals) {
+        if (Math.max(newApptStart, interval.start) < Math.min(newApptEnd, interval.end)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [type, date, timeslots, bookings, selectedBarber?.id, selectedDateKey, services, selectedService?.duration, selectedBarber?.availableTo]);
+
+  const availableSlotCount = availableSlots.length;
 
   useEffect(() => {
     if (type !== "reservation") return;
     if (!time) return;
-    if (!takenReservationSlots.has(time)) return;
+    if (availableSlots.includes(time)) return;
     setTime(undefined);
-  }, [type, time, takenReservationSlots]);
+  }, [type, time, availableSlots]);
 
   const toggleService = (service: Service) => {
     setSelectedServiceId((prev) => (prev === service.id ? "" : service.id));
@@ -720,20 +770,26 @@ export function BookingModal({ open, onOpenChange, initialBarber }: BookingModal
                             <SelectValue placeholder={date ? "Select a time" : "Pick a date first"} />
                           </SelectTrigger>
                           <SelectContent className="max-h-60">
-                            {timeslots.map((t) => (
-                              <SelectItem key={t} value={t} disabled={type === "reservation" && takenReservationSlots.has(t)}>
-                                {t}{type === "reservation" && takenReservationSlots.has(t) ? " (Unavailable)" : ""}
-                              </SelectItem>
-                            ))}
+                            {availableSlots.length > 0 ? (
+                              availableSlots.map((t) => (
+                                <SelectItem key={t} value={t}>
+                                  {t}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <div className="py-4 px-2 text-sm text-center text-muted-foreground">
+                                No slots available
+                              </div>
+                            )}
                           </SelectContent>
                         </Select>
-                        {type === "reservation" && date && takenReservationSlots.size > 0 && (
+                        {type === "reservation" && date && (timeslots.length - availableSlots.length) > 0 && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                             <span className="relative flex h-1.5 w-1.5">
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500" />
                             </span>
-                            {takenReservationSlots.size} slot{takenReservationSlots.size > 1 ? "s" : ""} taken — updates in real time
+                            {timeslots.length - availableSlots.length} slot{timeslots.length - availableSlots.length > 1 ? "s" : ""} unavailable
                           </p>
                         )}
                         {selectedBarber && (

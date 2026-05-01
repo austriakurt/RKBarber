@@ -5,7 +5,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { AmbientPageBackground } from "@/components/layout/AmbientPageBackground";
 import { QueueModal } from "@/components/queue/QueueModal";
 import { BookingModal } from "@/components/booking/BookingModal";
-import { useBarbers, useQueue, useSettings, useServices, useGallery } from "@/hooks/useFirestore";
+import { useBarbers, useQueue, useSettings, useServices, useGallery, useTodayBookings } from "@/hooks/useFirestore";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -20,6 +20,7 @@ export default function Home() {
   const [servicesOpen, setServicesOpen] = useState(false);
   const { barbers, loading: barbersLoading } = useBarbers();
   const { queue, loading: queueLoading } = useQueue();
+  const { bookings: todayBookings, loading: todayLoading } = useTodayBookings();
   const { settings } = useSettings();
   const { services, loading: servicesLoading } = useServices();
   const { gallery } = useGallery();
@@ -45,8 +46,9 @@ export default function Home() {
         open={queueOpen}
         onOpenChange={setQueueOpen}
         queue={queue}
+        todayBookings={todayBookings}
         barbers={activeBarbers}
-        loading={queueLoading || barbersLoading}
+        loading={queueLoading || barbersLoading || todayLoading}
       />
 
       {/* Services popup */}

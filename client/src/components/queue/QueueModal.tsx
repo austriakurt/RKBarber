@@ -1,17 +1,18 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Activity } from "lucide-react";
 import { QueueBoard } from "./QueueBoard";
-import type { QueueItem, Barber } from "@/lib/types";
+import type { QueueItem, Barber, Booking } from "@/lib/types";
 
 interface QueueModalProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   queue: QueueItem[];
+  todayBookings?: Booking[];
   barbers: Barber[];
   loading?: boolean;
 }
 
-export function QueueModal({ open, onOpenChange, queue, barbers, loading }: QueueModalProps) {
+export function QueueModal({ open, onOpenChange, queue, todayBookings = [], barbers, loading }: QueueModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl bg-card border-border/50 max-h-[85vh] overflow-y-auto">
@@ -22,7 +23,7 @@ export function QueueModal({ open, onOpenChange, queue, barbers, loading }: Queu
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground -mt-1">
-          Real-time walk-in queue status for each barber.
+          Real-time walk-in queue status and today's reservations for each barber.
         </p>
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -36,7 +37,7 @@ export function QueueModal({ open, onOpenChange, queue, barbers, loading }: Queu
           </div>
         ) : (
           <div className="pt-2">
-            <QueueBoard queue={queue} barbers={barbers} />
+            <QueueBoard queue={queue} todayBookings={todayBookings} barbers={barbers} />
           </div>
         )}
       </DialogContent>
