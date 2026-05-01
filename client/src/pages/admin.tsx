@@ -2313,6 +2313,7 @@ export default function Admin() {
             const pendingToday = todaysBookings.filter((b) => b.status === "pending");
             const reservationsToday = todaysBookings.filter((b) => b.type === "reservation");
             const walkinsToday = todaysBookings.filter((b) => b.type === "walkin");
+            const totalSalesToday = completedToday.reduce((sum, b) => sum + (b.price || 0), 0);
 
             return (
               <div className="space-y-4 max-w-5xl mx-auto">
@@ -2321,12 +2322,13 @@ export default function Admin() {
                   <p className="text-muted-foreground text-xs">{format(reportDate, "MMMM d, yyyy")}</p>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {[
-                    { label: "Total", value: todaysBookings.length, color: "text-primary", bg: "bg-primary/5 border-primary/20" },
-                    { label: "Completed", value: completedToday.length, color: "text-green-500", bg: "bg-green-500/5 border-green-500/20" },
-                    { label: "Reservations", value: reservationsToday.length, color: "text-blue-500", bg: "bg-blue-500/5 border-blue-500/20" },
-                    { label: "Walk-ins", value: walkinsToday.length, color: "text-amber-500", bg: "bg-amber-500/5 border-amber-500/20" },
+                    { label: "Total", value: String(todaysBookings.length), color: "text-primary", bg: "bg-primary/5 border-primary/20" },
+                    { label: "Completed", value: String(completedToday.length), color: "text-green-500", bg: "bg-green-500/5 border-green-500/20" },
+                    { label: "Reservations", value: String(reservationsToday.length), color: "text-blue-500", bg: "bg-blue-500/5 border-blue-500/20" },
+                    { label: "Walk-ins", value: String(walkinsToday.length), color: "text-amber-500", bg: "bg-amber-500/5 border-amber-500/20" },
+                    { label: "Total Sales", value: `₱${totalSalesToday.toLocaleString()}`, color: "text-emerald-400", bg: "bg-emerald-500/5 border-emerald-500/20" },
                   ].map((c) => (
                     <div key={c.label} className={`rounded-xl border p-3 ${c.bg}`}>
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{c.label}</p>
@@ -2349,6 +2351,7 @@ export default function Admin() {
                           <th className="text-center px-2 py-2 font-semibold text-muted-foreground">Reserve</th>
                           <th className="text-center px-2 py-2 font-semibold text-muted-foreground">Walk-in</th>
                           <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden sm:table-cell">Pending</th>
+                          <th className="text-center px-2 py-2 font-semibold text-emerald-400">Sales</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2357,6 +2360,7 @@ export default function Admin() {
                           const comp = bb.filter((b) => b.status === "completed").length;
                           const conf = bb.filter((b) => b.status === "confirmed").length;
                           const pend = bb.filter((b) => b.status === "pending").length;
+                          const barberSales = bb.filter((b) => b.status === "completed").reduce((sum, b) => sum + (b.price || 0), 0);
                           return (
                             <tr key={barber.id} className="border-b border-border/20 last:border-0 hover:bg-muted/10 transition-colors">
                               <td className="px-4 py-2">
@@ -2374,9 +2378,19 @@ export default function Admin() {
                               <td className="text-center px-2 py-2">{bb.filter((b) => b.type === "reservation").length}</td>
                               <td className="text-center px-2 py-2">{bb.filter((b) => b.type === "walkin").length}</td>
                               <td className="text-center px-2 py-2 text-amber-500 hidden sm:table-cell">{pend}</td>
+                              <td className="text-center px-2 py-2 font-bold text-emerald-400">₱{barberSales.toLocaleString()}</td>
                             </tr>
                           );
                         })}
+                        <tr className="border-t-2 border-border/40 bg-muted/20 font-bold">
+                          <td className="px-4 py-2 text-muted-foreground">Total</td>
+                          <td className="text-center px-2 py-2 text-primary">{completedToday.length + confirmedToday.length}</td>
+                          <td className="text-center px-2 py-2 text-green-500 hidden sm:table-cell">{completedToday.length}</td>
+                          <td className="text-center px-2 py-2">{reservationsToday.length}</td>
+                          <td className="text-center px-2 py-2">{walkinsToday.length}</td>
+                          <td className="text-center px-2 py-2 text-amber-500 hidden sm:table-cell">{pendingToday.length}</td>
+                          <td className="text-center px-2 py-2 text-emerald-400">₱{totalSalesToday.toLocaleString()}</td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
