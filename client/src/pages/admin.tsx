@@ -735,26 +735,7 @@ function BookingDetailsDialog({
     completed: { label: "Completed", className: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
     cancelled: { label: "Cancelled", className: "bg-red-500/15 text-red-400 border-red-500/30" },
   };
-  const decisionConfig: Record<string, string> = {
-    awaiting: "Awaiting admin review",
-    accepted: "Admin confirmed",
-    cancelled: "Cancelled",
-    reschedule_requested: "Rescheduled",
-    expired: "Expired",
-  };
-  const deadlineRaw = String(booking.customerActionDeadline || "").trim();
-  const deadlineMs = deadlineRaw ? Date.parse(deadlineRaw) : Number.NaN;
-  const canForceComplete = booking.type === "reservation"
-    && booking.status === "confirmed"
-    && booking.customerActionRequired === true
-    && Number.isFinite(deadlineMs)
-    && Date.now() >= deadlineMs;
-  const waitingForClientCompletion = booking.type === "reservation"
-    && booking.status === "confirmed"
-    && booking.customerActionRequired === true
-    && !canForceComplete;
-  const canMarkCompleted = booking.status === "confirmed"
-    && (booking.type === "walkin" || booking.customerActionRequired !== true || canForceComplete);
+  const canMarkCompleted = booking.status === "confirmed";
   const sc = statusConfig[booking.status] || statusConfig.pending;
   const initials = booking.customerName.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
@@ -813,22 +794,7 @@ function BookingDetailsDialog({
                     ? "not uploaded"
                     : "not required",
               },
-              {
-                label: "Confirmation",
-                value: booking.type === "reservation"
-                  ? (decisionConfig[booking.customerDecision || "awaiting"] || (booking.customerDecision || "awaiting"))
-                  : "not required",
-              },
-              ...(booking.type === "reservation" && booking.status === "confirmed"
-                ? [{
-                    label: "Client Completion",
-                    value: waitingForClientCompletion
-                      ? `Waiting for client action${Number.isFinite(deadlineMs) ? ` (force complete after ${new Date(deadlineMs).toLocaleString()})` : ""}`
-                      : canForceComplete
-                        ? "Force complete available"
-                        : "Completion unlocked",
-                  }]
-                : []),
+
               ...(booking.date ? [{ label: "Date & Time", value: `${booking.date}${booking.time ? ` · ${booking.time}` : ""}` }] : []),
               { label: "Booking ID", value: `#${booking.id.slice(-6).toUpperCase()}` },
             ].map(({ label, value }) => (
@@ -890,7 +856,7 @@ function BookingDetailsDialog({
             )}
             {canMarkCompleted && (
               <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white h-9 text-xs gap-1.5 flex-1" onClick={() => { onStatusChange(booking.id, "completed"); onOpenChange(false); }}>
-                <UserCheck className="w-3.5 h-3.5" /> {canForceComplete ? "Force Complete" : "Complete"}
+                <UserCheck className="w-3.5 h-3.5" /> Complete
               </Button>
             )}
             {booking.status !== "cancelled" && booking.status !== "completed" && (
@@ -2165,7 +2131,7 @@ export default function Admin() {
                             <ContextMenuItem onClick={() => setViewBooking(b)}><Eye className="w-4 h-4 mr-2" /> View Details</ContextMenuItem>
                             {b.status === "pending" && <ContextMenuItem className="text-emerald-500 focus:text-emerald-500" onClick={() => handleBookingStatus(b.id, "confirmed")}><CheckCircle className="w-4 h-4 mr-2" /> Confirm</ContextMenuItem>}
                             {(b.status === "pending" || b.status === "confirmed") && <ContextMenuItem className="text-primary focus:text-primary" onClick={() => openRescheduleDialog(b)}><Calendar className="w-4 h-4 mr-2" /> Reschedule</ContextMenuItem>}
-                            {(b.status === "confirmed" && (b.type === "walkin" || b.customerActionRequired !== true || (b.customerActionRequired === true && String(b.customerActionDeadline || "").trim() && Date.now() >= Date.parse(String(b.customerActionDeadline))))) && <ContextMenuItem className="text-blue-500 focus:text-blue-500" onClick={() => handleBookingStatus(b.id, "completed")}><UserCheck className="w-4 h-4 mr-2" /> {b.type === "reservation" && b.customerActionRequired === true ? "Force Complete" : "Mark Complete"}</ContextMenuItem>}
+                            {b.status === "confirmed" && <ContextMenuItem className="text-blue-500 focus:text-blue-500" onClick={() => handleBookingStatus(b.id, "completed")}><UserCheck className="w-4 h-4 mr-2" /> Mark Complete</ContextMenuItem>}
                             {b.status !== "cancelled" && b.status !== "completed" && <ContextMenuItem className="text-amber-500 focus:text-amber-500" onClick={() => handleBookingStatus(b.id, "cancelled")}><X className="w-4 h-4 mr-2" /> Cancel</ContextMenuItem>}
                             <ContextMenuSeparator />
                             <ContextMenuItem className="text-red-500 focus:text-red-500 focus:bg-red-500/10" onClick={() => setDeleteTarget({ type: "booking", id: b.id, name: `${b.customerName}'s booking` })}><Trash2 className="w-4 h-4 mr-2" /> Delete</ContextMenuItem>
