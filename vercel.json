@@ -7,6 +7,8 @@
     { "path": "/api/cron/send-reservation-reminders", "schedule": "0 10 * * *" }
   ],
   "rewrites": [
+    { "source": "/api/admin/:path*", "destination": "/api/admin/[...path]" },
+    { "source": "/api/bookings/:path*", "destination": "/api/bookings/[...path]" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
