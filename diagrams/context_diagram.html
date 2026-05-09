@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Context Diagram</title>
+  <style>
+    body { margin: 0; padding: 40px; background: #ffffff; display: flex; justify-content: center; }
+    #diagram { max-width: 1400px; }
+  </style>
+</head>
+<body>
+  <div id="diagram">
+    <pre class="mermaid">
+graph TB
+    subgraph External Actors
+        CUST["👤 Customer\n(Walk-in / Online)"]
+        ADMIN["🔑 Admin\n(Shop Owner/Staff)"]
+        SMTP["📧 SMTP Server\n(Nodemailer)"]
+        CLOUD["☁️ Cloudinary\n(Image CDN)"]
+        FB_AUTH["🔐 Firebase Auth"]
+        CRON["⏰ Vercel Cron\n(Scheduled Jobs)"]
+    end
+
+    subgraph "RK Barbershop System"
+        SYS["🏪 RK Barbershop\nWeb Application\n(Vite + Express + Firestore)"]
+    end
+
+    CUST -- "Browse services, barbers,\ngallery, location" --> SYS
+    CUST -- "Submit reservation/walk-in\nbooking with payment proof" --> SYS
+    CUST -- "Join walk-in queue" --> SYS
+    CUST -- "Confirm/Decline/Complete\nbooking via email link" --> SYS
+    SYS -- "Show real-time queue\n& booking status" --> CUST
+
+    ADMIN -- "Login via Firebase Auth" --> SYS
+    ADMIN -- "Manage barbers, services,\nbookings, queue, gallery, settings" --> SYS
+    SYS -- "Admin dashboard\n& daily reports" --> ADMIN
+
+    SYS -- "Send booking status,\nconfirmation, completion,\nreminder, & queue emails" --> SMTP
+    SMTP -- "Delivery status" --> SYS
+
+    SYS -- "Upload images\n(payment proof, barber photos,\ngallery)" --> CLOUD
+    CLOUD -- "Secure image URL" --> SYS
+
+    SYS <-- "Verify ID tokens,\nadmin claims" --> FB_AUTH
+
+    CRON -- "Trigger daily\nreservation reminders" --> SYS
+    SYS -- "Send reminder emails\nfor tomorrow's bookings" --> SMTP
+
+    style SYS fill:#1e293b,stroke:#3b82f6,stroke-width:3px,color:#f8fafc
+    style CUST fill:#059669,stroke:#047857,color:#fff
+    style ADMIN fill:#7c3aed,stroke:#6d28d9,color:#fff
+    style SMTP fill:#dc2626,stroke:#b91c1c,color:#fff
+    style CLOUD fill:#0ea5e9,stroke:#0284c7,color:#fff
+    style FB_AUTH fill:#f59e0b,stroke:#d97706,color:#fff
+    style CRON fill:#64748b,stroke:#475569,color:#fff
+    </pre>
+  </div>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose', flowchart: { useMaxWidth: false, htmlLabels: true } });
+  </script>
+</body>
+</html>

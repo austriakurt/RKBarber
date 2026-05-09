@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Firestore Collections Map</title>
+  <style>
+    body { margin: 0; padding: 40px; background: #ffffff; display: flex; justify-content: center; }
+    #diagram { max-width: 1400px; }
+  </style>
+</head>
+<body>
+  <div id="diagram">
+    <pre class="mermaid">
+graph LR
+    subgraph "Firebase Firestore Database"
+        B["📦 barbers\nCollection"]
+        S["📦 services\nCollection"]
+        BK["📦 bookings\nCollection"]
+        Q["📦 queue\nCollection"]
+        G["📦 gallery\nCollection"]
+        ST["📦 settings\nSingleton Doc: shop"]
+    end
+
+    subgraph "Access Patterns"
+        PUB["🌐 Public - Client SDK"]
+        ADM["🔒 Admin - Server API"]
+    end
+
+    PUB -- "onSnapshot real-time" --> B
+    PUB -- "onSnapshot real-time" --> S
+    PUB -- "onSnapshot real-time" --> BK
+    PUB -- "onSnapshot real-time" --> Q
+    PUB -- "onSnapshot real-time" --> G
+    PUB -- "getDoc" --> ST
+
+    ADM -- "CRUD via /api/admin/*" --> B
+    ADM -- "CRUD via /api/admin/*" --> S
+    ADM -- "CRUD via /api/admin/*" --> BK
+    ADM -- "CRUD via /api/admin/*" --> Q
+    ADM -- "CRUD via /api/admin/*" --> G
+    ADM -- "PATCH via /api/admin/settings" --> ST
+
+    style PUB fill:#059669,stroke:#047857,color:#fff
+    style ADM fill:#7c3aed,stroke:#6d28d9,color:#fff
+    </pre>
+  </div>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose', flowchart: { useMaxWidth: false, htmlLabels: true } });
+  </script>
+</body>
+</html>

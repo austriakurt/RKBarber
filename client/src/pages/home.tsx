@@ -3,13 +3,11 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Navbar } from "@/components/layout/Navbar";
 import { AmbientPageBackground } from "@/components/layout/AmbientPageBackground";
-import { QueueModal } from "@/components/queue/QueueModal";
 import { BookingModal } from "@/components/booking/BookingModal";
-import { useBarbers, useQueue, useSettings, useServices, useGallery, useTodayBookings } from "@/hooks/useFirestore";
+import { useBarbers, useSettings, useServices, useGallery } from "@/hooks/useFirestore";
 import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import AutoScroll from "embla-carousel-auto-scroll";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Clock, CheckCircle2, Scissors,
   Star,
@@ -18,11 +16,7 @@ import LogoImg from "@assets/rkbarber-logo-transparent.png";
 
 export default function Home() {
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [queueOpen, setQueueOpen] = useState(false);
-  const [servicesOpen, setServicesOpen] = useState(false);
   const { barbers, loading: barbersLoading } = useBarbers();
-  const { queue, loading: queueLoading } = useQueue();
-  const { bookings: todayBookings, loading: todayLoading } = useTodayBookings();
   const { settings } = useSettings();
   const { services, loading: servicesLoading } = useServices();
   const { gallery } = useGallery();
@@ -41,62 +35,9 @@ export default function Home() {
 
   return (
     <AmbientPageBackground className="min-h-screen bg-background selection:bg-primary selection:text-primary-foreground">
-      <Navbar onBookClick={() => setBookingOpen(true)} onQueueClick={() => setQueueOpen(true)} onServicesClick={() => setServicesOpen(true)} />
+      <Navbar onBookClick={() => setBookingOpen(true)} />
 
       <BookingModal open={bookingOpen} onOpenChange={setBookingOpen} />
-      <QueueModal
-        open={queueOpen}
-        onOpenChange={setQueueOpen}
-        queue={queue}
-        todayBookings={todayBookings}
-        barbers={activeBarbers}
-        loading={queueLoading || barbersLoading || todayLoading}
-      />
-
-      {/* Services popup */}
-      <Dialog open={servicesOpen} onOpenChange={setServicesOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[85dvh] bg-card border-border/50 p-0 overflow-hidden flex flex-col">
-          <div className="h-1 w-full bg-gradient-to-r from-primary via-primary/60 to-transparent" />
-          <div className="px-6 pt-5 pb-6 flex flex-col min-h-0">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="text-xl font-bold font-heading">Our Services</DialogTitle>
-            </DialogHeader>
-            {activeServices.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground/50">
-                <Scissors className="w-8 h-8 mb-2 opacity-30" />
-                <p className="text-sm">No services listed yet.</p>
-              </div>
-            ) : (
-              <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1">
-                {activeServices.map((service) => (
-                  <div key={service.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/30 border border-border/30 hover:border-primary/30 transition-colors">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <Scissors className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm break-words">{service.name}</p>
-                        {service.description && <p className="text-xs text-muted-foreground leading-relaxed break-words">{service.description}</p>}
-                      </div>
-                    </div>
-                    {!service.noPrice && (
-                      <span className="font-bold text-primary shrink-0 text-xs">
-                        W ₱{Number(service.walkinPrice ?? service.price ?? 0)} / R ₱{Number(service.reservationPrice ?? service.price ?? 0)}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            <Button
-              className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-semibold"
-              onClick={() => { setServicesOpen(false); setBookingOpen(true); }}
-            >
-              Book Now
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* ── Hero ───────────────────────────────────────────── */}
       <section className="min-h-screen flex flex-col justify-center pt-24 pb-16">
@@ -127,12 +68,16 @@ export default function Home() {
                 <Button size="lg" type="button" className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-8 h-14 rounded-full font-semibold" onClick={() => setBookingOpen(true)}>
                   Book Appointment
                 </Button>
-                <Button size="lg" type="button" variant="outline" className="text-lg px-8 h-14 rounded-full border-border/50 bg-background/50 backdrop-blur-sm hover:bg-accent/50 transition-colors" onClick={() => setQueueOpen(true)}>
-                  View Live Queue
+                <Button size="lg" type="button" variant="outline" className="text-lg px-8 h-14 rounded-full border-border/50 bg-background/50 backdrop-blur-sm hover:bg-accent/50 transition-colors" asChild>
+                  <Link href="/queue">
+                    View Live Queue
+                  </Link>
                 </Button>
-                <Button size="lg" type="button" variant="ghost" className="text-lg px-8 h-14 rounded-full hover:bg-accent/50 transition-colors" onClick={() => setServicesOpen(true)}>
-                  <Scissors className="w-5 h-5 mr-2" />
-                  View Services
+                <Button size="lg" type="button" variant="ghost" className="text-lg px-8 h-14 rounded-full hover:bg-accent/50 transition-colors" asChild>
+                  <Link href="/services">
+                    <Scissors className="w-5 h-5 mr-2" />
+                    View Services
+                  </Link>
                 </Button>
               </div>
             </motion.div>
@@ -267,6 +212,8 @@ export default function Home() {
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-4">
             <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
             <Link href="/barbers" className="hover:text-foreground transition-colors">Our Team</Link>
+            <Link href="/services" className="hover:text-foreground transition-colors">Services</Link>
+            <Link href="/queue" className="hover:text-foreground transition-colors">Live Queue</Link>
             <Link href="/location" className="hover:text-foreground transition-colors">Location</Link>
           </div>
           <p className="text-muted-foreground text-sm">

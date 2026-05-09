@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Calendar, Settings,
   ArrowLeft, Loader2, Trash2, UserCheck, UserX,
   X, LogOut, Lock, Activity, CheckCircle, Plus,
-  Edit2, Scissors, Clock, Eye, EyeOff, AlertCircle, Upload, Download, Image as ImageIcon, BarChart2, ImagePlus,
+  Edit2, Scissors, Clock, Eye, EyeOff, AlertCircle, Upload, Download, Image as ImageIcon, BarChart2, ImagePlus, Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -2282,10 +2282,30 @@ export default function Admin() {
             const totalSalesToday = completedToday.reduce((sum, b) => sum + (b.price || 0), 0);
 
             return (
-              <div className="space-y-4 max-w-5xl mx-auto">
-                <div>
-                  <h1 className="text-xl font-bold">Daily Report</h1>
-                  <p className="text-muted-foreground text-xs">{format(reportDate, "MMMM d, yyyy")}</p>
+              <div className="space-y-4 max-w-5xl mx-auto print-report">
+                {/* Print-only branded header */}
+                <div className="print-report-header">
+                  <img src={LogoImg} alt="RK Barbershop" />
+                  <div>
+                    <h1>{settings?.shopName || "RK Barbershop"}</h1>
+                    <p>Daily Report — {format(reportDate, "MMMM d, yyyy")}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-xl font-bold">Daily Report</h1>
+                    <p className="text-muted-foreground text-xs">{format(reportDate, "MMMM d, yyyy")}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="no-print gap-2 h-8 text-xs"
+                    onClick={() => window.print()}
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    Print Report
+                  </Button>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -2373,6 +2393,11 @@ export default function Admin() {
                       <p className="text-[10px] font-semibold uppercase tracking-wider">{s.label}</p>
                     </div>
                   ))}
+                </div>
+
+                {/* Print-only footer */}
+                <div className="print-report-footer">
+                  Generated on {format(new Date(), "MMMM d, yyyy 'at' h:mm a")} • {settings?.shopName || "RK Barbershop"} Admin Dashboard
                 </div>
               </div>
             );

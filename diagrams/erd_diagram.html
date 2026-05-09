@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ERD Diagram</title>
+  <style>
+    body { margin: 0; padding: 40px; background: #ffffff; display: flex; justify-content: center; }
+    #diagram { max-width: 2000px; }
+  </style>
+</head>
+<body>
+  <div id="diagram">
+    <pre class="mermaid">
+erDiagram
+    BARBERS {
+        string id PK "Auto-generated Firestore doc ID"
+        string name "Barber display name"
+        string specialty "Derived comma-joined service names"
+        string_arr services "FK Array of Service IDs offered"
+        number reservePrice "Reservation price PHP"
+        number walkinPrice "Walk-in price PHP"
+        boolean active "Whether barber is currently active"
+        string image "Profile image URL Cloudinary"
+        number order "Display sort order"
+        string_arr availableDays "e.g. Monday Tuesday"
+        string availableFrom "e.g. 9:00 AM"
+        string availableTo "e.g. 8:00 PM"
+        string_arr daysOff "Specific ISO dates off"
+        string createdAt "ISO 8601 timestamp"
+    }
+
+    SERVICES {
+        string id PK "Auto-generated Firestore doc ID"
+        string name "Service name"
+        enum serviceType "solo or package"
+        string_arr includedServiceIds "FK Array of Service IDs for packages"
+        string description "Service description"
+        number price "Base display price PHP"
+        number walkinPrice "Walk-in specific price"
+        number reservationPrice "Reservation specific price"
+        boolean noPrice "If true price not shown"
+        number duration "Duration in minutes"
+        boolean active "Whether service is active"
+        number order "Display sort order"
+        string createdAt "ISO 8601 timestamp"
+    }
+
+    BOOKINGS {
+        string id PK "Auto-generated Firestore doc ID"
+        string barberId FK "References BARBERS.id"
+        string barberName "Denormalized barber name"
+        string serviceId FK "References SERVICES.id primary"
+        string serviceName "Denormalized service name"
+        string_arr serviceIds FK "All selected Service IDs"
+        string_arr serviceNames "All selected service names"
+        string customerName "Customer full name"
+        string phone "PH phone 09xx or plus639xx"
+        string email "Customer email required for reservations"
+        string notes "Optional booking notes"
+        string paymentProofUrl "Cloudinary URL of GCash proof"
+        string date "Booking date yyyy-MM-dd"
+        string time "Booking time e.g. 2:00 PM"
+        enum type "reservation or walkin"
+        enum status "pending confirmed cancelled completed"
+        number price "Calculated price PHP"
+        enum customerDecision "awaiting accepted cancelled reschedule_requested expired"
+        boolean customerActionRequired "Whether customer action is pending"
+        string customerActionDeadline "ISO deadline for customer action"
+        string customerDecisionAt "ISO timestamp of decision"
+        string customerTokenHash "HMAC-SHA256 hash for email action links"
+        string completionRequestedAt "When completion was requested"
+        string completionConfirmedAt "When completion was confirmed"
+        enum completedBy "client or admin"
+        string forceCompletedAt "When force-completed"
+        boolean emailNotificationSent "Last email send success"
+        string emailNotificationError "Last email error message"
+        string reminderSentForDate "Date for which reminder was sent"
+        string reminderLastSentAt "ISO timestamp of last reminder"
+        string rescheduledAt "When booking was rescheduled"
+        string createdAt "ISO 8601 timestamp"
+    }
+
+    QUEUE {
+        string id PK "Auto-generated Firestore doc ID"
+        string barberId FK "References BARBERS.id"
+        string customerName "Walk-in customer name"
+        string phone "Customer phone"
+        string email "Optional customer email"
+        number position "Queue position ascending"
+        enum status "waiting in-progress done"
+        string queueNotifiedAt "ISO timestamp when notified"
+        string createdAt "ISO 8601 timestamp"
+    }
+
+    GALLERY {
+        string id PK "Auto-generated Firestore doc ID"
+        string imageUrl "Cloudinary image URL"
+        string caption "Image caption"
+        string barberId FK "Optional references BARBERS.id"
+        string hairstyleName "Optional hairstyle label"
+        number order "Display sort order"
+        string createdAt "ISO 8601 timestamp"
+    }
+
+    SETTINGS {
+        string doc_id PK "Always shop singleton"
+        string shopName "e.g. RK Barbershop"
+        string address "Street address"
+        string city "City"
+        string province "Province"
+        string country "Country"
+        string openTime "e.g. 9:00 AM"
+        string closeTime "e.g. 8:00 PM"
+        string operatingDays "e.g. Monday - Sunday"
+        string email "Shop contact email"
+        string facebookUrl "Facebook page URL"
+        string tiktokUrl "TikTok URL"
+        string googleMapsUrl "Google Maps embed URL"
+        string tagline "Shop tagline"
+        string aboutText "About section text"
+        string gcashNumber "GCash payment number"
+        string gcashQrCodeUrl "GCash QR code image URL"
+        string reservationPolicyText "Reservation policy text"
+        string combo1ServiceAId FK "Combo 1 Service A ID"
+        string combo1ServiceBId FK "Combo 1 Service B ID"
+        number combo1WalkinPrice "Combo 1 walk-in price"
+        number combo1ReservationPrice "Combo 1 reservation price"
+        string combo2ServiceAId FK "Combo 2 Service A ID"
+        string combo2ServiceBId FK "Combo 2 Service B ID"
+        number combo2WalkinPrice "Combo 2 walk-in price"
+        number combo2ReservationPrice "Combo 2 reservation price"
+    }
+
+    USERS {
+        string id PK "UUID PostgreSQL in-memory"
+        string username UK "Unique username"
+        string password "Hashed password"
+    }
+
+    BARBERS ||--o{ BOOKINGS : "serves"
+    BARBERS ||--o{ QUEUE : "has queue for"
+    BARBERS ||--o{ GALLERY : "featured in"
+    SERVICES ||--o{ BOOKINGS : "booked as"
+    BARBERS }o--o{ SERVICES : "offers via services array"
+    SERVICES }o--o{ SERVICES : "includes package to solo"
+    SETTINGS }o--o{ SERVICES : "references combo IDs"
+    </pre>
+  </div>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose', er: { useMaxWidth: false } });
+  </script>
+</body>
+</html>

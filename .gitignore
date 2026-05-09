@@ -7,4 +7,5 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+diagrams
 server/*firebase-adminsdk*.json

@@ -416,7 +416,7 @@ export function BookingModal({ open, onOpenChange, initialBarber }: BookingModal
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/30">
           <DialogTitle className="text-xl flex items-center gap-2 font-heading">
             <Scissors className="w-5 h-5 text-primary" />
-            Book Appointment
+            {type === "walkin" ? "Walk-In" : "Book Appointment"}
           </DialogTitle>
           <div className="space-y-1.5 mt-3">
             <div className="flex gap-1">
