@@ -1,7 +1,12 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Activity } from "lucide-react";
-import { QueueBoard } from "./QueueBoard";
-import type { QueueItem, Barber, Booking } from "@/lib/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Loader2, Activity } from 'lucide-react';
+import { QueueBoard } from './QueueBoard';
+import type { QueueItem, Barber, Booking } from '@/lib/types';
 
 interface QueueModalProps {
   open: boolean;
@@ -12,7 +17,14 @@ interface QueueModalProps {
   loading?: boolean;
 }
 
-export function QueueModal({ open, onOpenChange, queue, todayBookings = [], barbers, loading }: QueueModalProps) {
+export function QueueModal({
+  open,
+  onOpenChange,
+  queue,
+  todayBookings = [],
+  barbers,
+  loading,
+}: QueueModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl bg-card border-border/50 max-h-[85vh] overflow-y-auto">
@@ -23,7 +35,12 @@ export function QueueModal({ open, onOpenChange, queue, todayBookings = [], barb
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground -mt-1">
-          Real-time walk-in queue status and today's reservations for each barber.
+          Real-time walk-in queue status and today's reservations for each
+          barber. Reservations are prioritized at their scheduled time.
+        </p>
+        <p className="text-xs text-muted-foreground -mt-1.5">
+          Paalala: Mas inuuna ang may reservation kapag oras na ng schedule
+          nila.
         </p>
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -32,12 +49,18 @@ export function QueueModal({ open, onOpenChange, queue, todayBookings = [], barb
         ) : barbers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
             <Activity className="w-10 h-10 opacity-30" />
-            <p className="text-sm font-medium">No barbers available right now</p>
+            <p className="text-sm font-medium">
+              No barbers available right now
+            </p>
             <p className="text-xs opacity-60">Check back during shop hours.</p>
           </div>
         ) : (
           <div className="pt-2">
-            <QueueBoard queue={queue} todayBookings={todayBookings} barbers={barbers} />
+            <QueueBoard
+              queue={queue}
+              todayBookings={todayBookings}
+              barbers={barbers}
+            />
           </div>
         )}
       </DialogContent>

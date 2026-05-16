@@ -1,9 +1,19 @@
-import crypto from "node:crypto";
-import nodemailer from "nodemailer";
+import crypto from 'node:crypto';
+import nodemailer from 'nodemailer';
 
-export type CustomerDecision = "awaiting" | "accepted" | "cancelled" | "reschedule_requested" | "expired";
+export type CustomerDecision =
+  | 'awaiting'
+  | 'accepted'
+  | 'cancelled'
+  | 'reschedule_requested'
+  | 'expired';
 
-export type BookingEmailStatus = "pending" | "approved" | "cancelled" | "rescheduled" | "completed";
+export type BookingEmailStatus =
+  | 'pending'
+  | 'approved'
+  | 'cancelled'
+  | 'rescheduled'
+  | 'completed';
 
 export type BookingRecord = {
   id: string;
@@ -14,8 +24,8 @@ export type BookingRecord = {
   email?: string;
   date: string;
   time?: string;
-  type: "reservation" | "walkin";
-  status: "pending" | "confirmed" | "cancelled" | "completed";
+  type: 'reservation' | 'walkin';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   serviceName?: string;
   price?: number;
   customerDecision?: CustomerDecision;
@@ -24,30 +34,32 @@ export type BookingRecord = {
   customerActionDeadline?: string;
   completionRequestedAt?: string;
   completionConfirmedAt?: string;
-  completedBy?: "client" | "admin";
+  completedBy?: 'client' | 'admin';
   forceCompletedAt?: string;
 };
 
 const DEFAULT_FORCE_COMPLETE_AFTER_HOURS = 6;
 
 export function getBaseUrl(req: any): string {
-  const isProd = process.env.NODE_ENV === "production";
-  const devBase = (process.env.DEV_PUBLIC_BASE_URL || "").trim();
-  if (!isProd && devBase) return devBase.replace(/\/$/, "");
+  const isProd = process.env.NODE_ENV === 'production';
+  const devBase = (process.env.DEV_PUBLIC_BASE_URL || '').trim();
+  if (!isProd && devBase) return devBase.replace(/\/$/, '');
 
-  const envBase = (process.env.PUBLIC_BASE_URL || "").trim();
-  if (isProd && envBase) return envBase.replace(/\/$/, "");
+  const envBase = (process.env.PUBLIC_BASE_URL || '').trim();
+  if (isProd && envBase) return envBase.replace(/\/$/, '');
 
-  const origin = String(req.headers?.origin || "").trim();
-  if (origin) return origin.replace(/\/$/, "");
+  const origin = String(req.headers?.origin || '').trim();
+  if (origin) return origin.replace(/\/$/, '');
 
-  const proto = String(req.headers?.["x-forwarded-proto"] || "http");
-  const host = String(req.headers?.["x-forwarded-host"] || req.headers?.host || "localhost:5000");
+  const proto = String(req.headers?.['x-forwarded-proto'] || 'http');
+  const host = String(
+    req.headers?.['x-forwarded-host'] || req.headers?.host || 'localhost:5000'
+  );
   return `${proto}://${host}`;
 }
 
 export function parseBookingDateTime(date: string, time?: string): Date | null {
-  const safeDate = String(date || "").trim();
+  const safeDate = String(date || '').trim();
   if (!safeDate) return null;
 
   if (!time) {
@@ -55,7 +67,9 @@ export function parseBookingDateTime(date: string, time?: string): Date | null {
     return Number.isNaN(d.getTime()) ? null : d;
   }
 
-  const m = String(time).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  const m = String(time)
+    .trim()
+    .match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
   if (!m) {
     const d = new Date(`${safeDate}T00:00:00`);
     return Number.isNaN(d.getTime()) ? null : d;
@@ -65,23 +79,30 @@ export function parseBookingDateTime(date: string, time?: string): Date | null {
   const minute = Number(m[2]);
   const period = m[3].toUpperCase();
 
-  if (period === "PM" && hour !== 12) hour += 12;
-  if (period === "AM" && hour === 12) hour = 0;
+  if (period === 'PM' && hour !== 12) hour += 12;
+  if (period === 'AM' && hour === 12) hour = 0;
 
-  const hh = String(hour).padStart(2, "0");
-  const mm = String(minute).padStart(2, "0");
+  const hh = String(hour).padStart(2, '0');
+  const mm = String(minute).padStart(2, '0');
   const d = new Date(`${safeDate}T${hh}:${mm}:00`);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-export function getActionDeadlineIso(date: string, time?: string): string | null {
+export function getActionDeadlineIso(
+  date: string,
+  time?: string
+): string | null {
   const appt = parseBookingDateTime(date, time);
   if (!appt) return null;
   const deadline = new Date(appt.getTime() - 60 * 60 * 1000);
   return deadline.toISOString();
 }
 
-export function isInsideActionWindow(date: string, time?: string, now = new Date()): boolean {
+export function isInsideActionWindow(
+  date: string,
+  time?: string,
+  now = new Date()
+): boolean {
   const appt = parseBookingDateTime(date, time);
   if (!appt) return false;
   const deadline = new Date(appt.getTime() - 60 * 60 * 1000);
@@ -89,7 +110,7 @@ export function isInsideActionWindow(date: string, time?: string, now = new Date
 }
 
 export function createActionToken(): string {
-  return crypto.randomBytes(32).toString("hex");
+  return crypto.randomBytes(32).toString('hex');
 }
 
 export function hashActionToken(token: string): string {
@@ -97,28 +118,33 @@ export function hashActionToken(token: string): string {
     process.env.BOOKING_TOKEN_SECRET ||
     process.env.FIREBASE_PRIVATE_KEY ||
     process.env.FIREBASE_PROJECT_ID ||
-    "rk-booking-secret";
-  return crypto.createHmac("sha256", secret).update(token).digest("hex");
+    'rk-booking-secret';
+  return crypto.createHmac('sha256', secret).update(token).digest('hex');
 }
 
-export function getBookingStatusEmailSubject(status: BookingEmailStatus): string {
-  if (status === "approved") return "RK Barbershop - Booking Approved";
-  if (status === "cancelled") return "RK Barbershop - Booking Cancelled";
-  if (status === "rescheduled") return "RK Barbershop - Booking Rescheduled";
-  if (status === "completed") return "RK Barbershop - Service Completed";
-  return "RK Barbershop - Booking Request Received";
+export function getBookingStatusEmailSubject(
+  status: BookingEmailStatus
+): string {
+  if (status === 'approved') return 'RK Barbershop - Booking Approved';
+  if (status === 'cancelled') return 'RK Barbershop - Booking Cancelled';
+  if (status === 'rescheduled') return 'RK Barbershop - Booking Rescheduled';
+  if (status === 'completed') return 'RK Barbershop - Service Completed';
+  return 'RK Barbershop - Booking Request Received';
 }
 
 export function getBookingConfirmationRequestEmailSubject(): string {
-  return "RK Barbershop - Confirm Your Booking";
+  return 'RK Barbershop - Confirm Your Booking';
 }
 
 export function getBookingCompletionRequestEmailSubject(): string {
-  return "RK Barbershop - Confirm Service Completion";
+  return 'RK Barbershop - Confirm Service Completion';
 }
 
 export function getForceCompleteAfterHours(): number {
-  const raw = Number(process.env.BOOKING_FORCE_COMPLETE_AFTER_HOURS || DEFAULT_FORCE_COMPLETE_AFTER_HOURS);
+  const raw = Number(
+    process.env.BOOKING_FORCE_COMPLETE_AFTER_HOURS ||
+      DEFAULT_FORCE_COMPLETE_AFTER_HOURS
+  );
   if (!Number.isFinite(raw) || raw <= 0) {
     return DEFAULT_FORCE_COMPLETE_AFTER_HOURS;
   }
@@ -132,7 +158,7 @@ export function getForceCompleteEligibleAtIso(now = new Date()): string {
 }
 
 export function getReservationReminderEmailSubject(): string {
-  return "RK Barbershop - Reminder: Your reservation is tomorrow";
+  return 'RK Barbershop - Reminder: Your reservation is tomorrow';
 }
 
 export function buildReservationReminderEmailHtml(params: {
@@ -146,14 +172,17 @@ export function buildReservationReminderEmailHtml(params: {
   const { customerName, serviceName, barberName, date, time, price } = params;
 
   const rows = [
-    ["Service(s)", serviceName || "-"],
-    ["Barber", barberName || "-"],
-    ["Schedule", `${date}${time ? ` at ${time}` : ""}`],
-    ["Total", `PHP ${price}`],
-    ["Status", "Pending Reservation"],
+    ['Service(s)', serviceName || '-'],
+    ['Barber', barberName || '-'],
+    ['Schedule', `${date}${time ? ` at ${time}` : ''}`],
+    ['Total', `PHP ${price}`],
+    ['Status', 'Pending Reservation'],
   ]
-    .map(([k, v]) => `<tr><td style="padding:8px 0;color:#64748B;font-size:13px">${escapeHtml(String(k))}</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0F172A;font-size:13px">${escapeHtml(String(v))}</td></tr>`)
-    .join("");
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:8px 0;color:#64748B;font-size:13px">${escapeHtml(String(k))}</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0F172A;font-size:13px">${escapeHtml(String(v))}</td></tr>`
+    )
+    .join('');
 
   return `
   <div style="font-family:'Segoe UI',Arial,sans-serif;background:#F1F5F9;padding:26px 14px">
@@ -196,68 +225,100 @@ export function buildBookingStatusEmailHtml(params: {
   time?: string;
   price: number;
   status: BookingEmailStatus;
+  rescheduleReason?: string;
   previousSchedule?: { date: string; time?: string };
 }): string {
-  const { customerName, serviceName, barberName, date, time, price, status, previousSchedule } = params;
+  const {
+    customerName,
+    serviceName,
+    barberName,
+    date,
+    time,
+    price,
+    status,
+    rescheduleReason,
+    previousSchedule,
+  } = params;
 
   const statusMeta: Record<
     BookingEmailStatus,
-    { label: string; intro: string; accent: string; softBg: string; softText: string }
+    {
+      label: string;
+      intro: string;
+      accent: string;
+      softBg: string;
+      softText: string;
+    }
   > = {
     pending: {
-      label: "Pending Admin Review",
-      intro: "Your reservation has been received. Our team will review your booking and send another update once it is approved, cancelled, or rescheduled.",
-      accent: "#D97706",
-      softBg: "#FFFBEB",
-      softText: "#92400E",
+      label: 'Pending Admin Review',
+      intro:
+        'Your reservation has been received. Our team will review your booking and send another update once it is approved, cancelled, or rescheduled.',
+      accent: '#D97706',
+      softBg: '#FFFBEB',
+      softText: '#92400E',
     },
     approved: {
-      label: "Approved",
-      intro: "Good news. Your booking has been approved by the shop admin.",
-      accent: "#059669",
-      softBg: "#ECFDF5",
-      softText: "#065F46",
+      label: 'Approved',
+      intro: 'Good news. Your booking has been approved by the shop admin.',
+      accent: '#059669',
+      softBg: '#ECFDF5',
+      softText: '#065F46',
     },
     cancelled: {
-      label: "Cancelled",
-      intro: "Your booking was cancelled by the shop admin. If you want a new slot, please submit another reservation.",
-      accent: "#DC2626",
-      softBg: "#FEF2F2",
-      softText: "#991B1B",
+      label: 'Cancelled',
+      intro:
+        'Your booking was cancelled by the shop admin. If you want a new slot, please submit another reservation.',
+      accent: '#DC2626',
+      softBg: '#FEF2F2',
+      softText: '#991B1B',
     },
     rescheduled: {
-      label: "Rescheduled",
-      intro: "Your booking schedule has been updated by the shop admin. Please review the new appointment details below.",
-      accent: "#2563EB",
-      softBg: "#EFF6FF",
-      softText: "#1E3A8A",
+      label: 'Rescheduled',
+      intro:
+        'Your booking schedule has been updated by the shop admin. Please review the new appointment details below.',
+      accent: '#2563EB',
+      softBg: '#EFF6FF',
+      softText: '#1E3A8A',
     },
     completed: {
-      label: "Completed",
-      intro: "Your service has been marked as completed. Thank you for choosing RK Barbershop. We look forward to seeing you again.",
-      accent: "#0EA5E9",
-      softBg: "#ECFEFF",
-      softText: "#155E75",
+      label: 'Completed',
+      intro:
+        'Your service has been marked as completed. Thank you for choosing RK Barbershop. We look forward to seeing you again.',
+      accent: '#0EA5E9',
+      softBg: '#ECFEFF',
+      softText: '#155E75',
     },
   };
 
   const meta = statusMeta[status];
   const rows = [
-    ["Service(s)", serviceName || "-"],
-    ["Barber", barberName || "-"],
-    ["Schedule", `${date}${time ? ` at ${time}` : ""}`],
-    ["Total", `PHP ${price}`],
-    ["Status", meta.label],
+    ['Service(s)', serviceName || '-'],
+    ['Barber', barberName || '-'],
+    ['Schedule', `${date}${time ? ` at ${time}` : ''}`],
+    ['Total', `PHP ${price}`],
+    ['Status', meta.label],
   ]
-    .map(([k, v]) => `<tr><td style="padding:8px 0;color:#64748B;font-size:13px">${escapeHtml(String(k))}</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0F172A;font-size:13px">${escapeHtml(String(v))}</td></tr>`)
-    .join("");
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:8px 0;color:#64748B;font-size:13px">${escapeHtml(String(k))}</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0F172A;font-size:13px">${escapeHtml(String(v))}</td></tr>`
+    )
+    .join('');
 
   const previousScheduleHtml = previousSchedule
     ? `<div style="margin-top:14px;padding:12px;border-radius:10px;background:#F8FAFC;border:1px dashed #CBD5E1">
          <p style="margin:0 0 4px;font-size:12px;letter-spacing:.02em;color:#475569;font-weight:700">Previous Schedule</p>
-         <p style="margin:0;font-size:13px;color:#0F172A;font-weight:600">${escapeHtml(previousSchedule.date)}${previousSchedule.time ? ` at ${escapeHtml(previousSchedule.time)}` : ""}</p>
+         <p style="margin:0;font-size:13px;color:#0F172A;font-weight:600">${escapeHtml(previousSchedule.date)}${previousSchedule.time ? ` at ${escapeHtml(previousSchedule.time)}` : ''}</p>
        </div>`
-    : "";
+    : '';
+
+  const rescheduleReasonHtml =
+    status === 'rescheduled'
+      ? `<div style="margin-top:14px;padding:12px;border-radius:10px;background:#FFFBEB;border:1px solid #FDE68A">
+         <p style="margin:0 0 4px;font-size:12px;letter-spacing:.02em;color:#92400E;font-weight:700">Reason for Reschedule</p>
+         <p style="margin:0;font-size:13px;color:#78350F;font-weight:600">${escapeHtml(rescheduleReason || 'No reason provided.')}</p>
+       </div>`
+      : '';
 
   return `
   <div style="font-family:'Segoe UI',Arial,sans-serif;background:#F1F5F9;padding:26px 14px">
@@ -279,6 +340,7 @@ export function buildBookingStatusEmailHtml(params: {
         </div>
 
         ${previousScheduleHtml}
+  ${rescheduleReasonHtml}
 
         <div style="margin-top:16px;padding:12px;border-radius:10px;background:#F8FAFC;border-left:4px solid ${meta.accent}">
           <p style="margin:0;font-size:12px;color:#475569;line-height:1.6">
@@ -303,21 +365,34 @@ export function buildBookingConfirmationRequestEmailHtml(params: {
   time?: string;
   price: number;
 }): string {
-  const { baseUrl, token, bookingId, customerName, serviceName, barberName, date, time, price } = params;
-  const safeBaseUrl = String(baseUrl || "").replace(/\/$/, "");
+  const {
+    baseUrl,
+    token,
+    bookingId,
+    customerName,
+    serviceName,
+    barberName,
+    date,
+    time,
+    price,
+  } = params;
+  const safeBaseUrl = String(baseUrl || '').replace(/\/$/, '');
   const baseActionUrl = `${safeBaseUrl}/api/bookings/action`;
   const sharedParams = `token=${encodeURIComponent(token)}&bookingId=${encodeURIComponent(bookingId)}`;
   const confirmUrl = `${baseActionUrl}?action=confirm&${sharedParams}`;
   const declineUrl = `${baseActionUrl}?action=decline&${sharedParams}`;
 
   const rows = [
-    ["Service(s)", serviceName || "-"],
-    ["Barber", barberName || "-"],
-    ["Schedule", `${date}${time ? ` at ${time}` : ""}`],
-    ["Total", `PHP ${price}`],
+    ['Service(s)', serviceName || '-'],
+    ['Barber', barberName || '-'],
+    ['Schedule', `${date}${time ? ` at ${time}` : ''}`],
+    ['Total', `PHP ${price}`],
   ]
-    .map(([k, v]) => `<tr><td style="padding:8px 0;color:#64748B;font-size:13px">${escapeHtml(String(k))}</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0F172A;font-size:13px">${escapeHtml(String(v))}</td></tr>`)
-    .join("");
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:8px 0;color:#64748B;font-size:13px">${escapeHtml(String(k))}</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0F172A;font-size:13px">${escapeHtml(String(v))}</td></tr>`
+    )
+    .join('');
 
   return `
   <div style="font-family:'Segoe UI',Arial,sans-serif;background:#F1F5F9;padding:26px 14px">
@@ -367,21 +442,34 @@ export function buildBookingCompletionRequestEmailHtml(params: {
   time?: string;
   price: number;
 }): string {
-  const { baseUrl, token, bookingId, customerName, serviceName, barberName, date, time, price } = params;
-  const safeBaseUrl = String(baseUrl || "").replace(/\/$/, "");
+  const {
+    baseUrl,
+    token,
+    bookingId,
+    customerName,
+    serviceName,
+    barberName,
+    date,
+    time,
+    price,
+  } = params;
+  const safeBaseUrl = String(baseUrl || '').replace(/\/$/, '');
   const baseActionUrl = `${safeBaseUrl}/api/bookings/action`;
   const sharedParams = `token=${encodeURIComponent(token)}&bookingId=${encodeURIComponent(bookingId)}`;
   const completeUrl = `${baseActionUrl}?action=complete&${sharedParams}`;
 
   const rows = [
-    ["Service(s)", serviceName || "-"],
-    ["Barber", barberName || "-"],
-    ["Schedule", `${date}${time ? ` at ${time}` : ""}`],
-    ["Total", `PHP ${price}`],
-    ["Booking Status", "Admin Confirmed"],
+    ['Service(s)', serviceName || '-'],
+    ['Barber', barberName || '-'],
+    ['Schedule', `${date}${time ? ` at ${time}` : ''}`],
+    ['Total', `PHP ${price}`],
+    ['Booking Status', 'Admin Confirmed'],
   ]
-    .map(([k, v]) => `<tr><td style="padding:8px 0;color:#64748B;font-size:13px">${escapeHtml(String(k))}</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0F172A;font-size:13px">${escapeHtml(String(v))}</td></tr>`)
-    .join("");
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:8px 0;color:#64748B;font-size:13px">${escapeHtml(String(k))}</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0F172A;font-size:13px">${escapeHtml(String(v))}</td></tr>`
+    )
+    .join('');
 
   return `
   <div style="font-family:'Segoe UI',Arial,sans-serif;background:#F1F5F9;padding:26px 14px">
@@ -424,15 +512,19 @@ export async function sendBookingActionEmail(params: {
   subject: string;
   html: string;
 }): Promise<{ sent: boolean; reason?: string }> {
-  const host = (process.env.SMTP_HOST || "").trim();
-  const user = (process.env.SMTP_USER || "").trim();
-  const pass = (process.env.SMTP_PASS || "").trim();
-  const from = (process.env.BOOKING_FROM_EMAIL || user || "").trim();
+  const host = (process.env.SMTP_HOST || '').trim();
+  const user = (process.env.SMTP_USER || '').trim();
+  const pass = (process.env.SMTP_PASS || '').trim();
+  const from = (process.env.BOOKING_FROM_EMAIL || user || '').trim();
   const port = Number(process.env.SMTP_PORT || 587);
-  const secure = String(process.env.SMTP_SECURE || "false").toLowerCase() === "true";
+  const secure =
+    String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true';
 
   if (!host || !user || !pass || !from) {
-    return { sent: false, reason: "SMTP environment variables are not configured" };
+    return {
+      sent: false,
+      reason: 'SMTP environment variables are not configured',
+    };
   }
 
   const transporter = nodemailer.createTransport({
@@ -452,23 +544,29 @@ export async function sendBookingActionEmail(params: {
   return { sent: true };
 }
 
-export function decisionToStatus(decision: CustomerDecision): BookingRecord["status"] {
-  if (decision === "accepted") return "confirmed";
-  if (decision === "cancelled" || decision === "expired") return "cancelled";
-  return "pending";
+export function decisionToStatus(
+  decision: CustomerDecision
+): BookingRecord['status'] {
+  if (decision === 'accepted') return 'confirmed';
+  if (decision === 'cancelled' || decision === 'expired') return 'cancelled';
+  return 'pending';
 }
 
-export function actionResultHtml(title: string, message: string, ok = true): string {
+export function actionResultHtml(
+  title: string,
+  message: string,
+  ok = true
+): string {
   return actionResultWithBackHtml({ title, message, ok });
 }
 
 function escapeHtml(value: string): string {
   return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export function bookingActionPageHtml(params: {
@@ -477,7 +575,9 @@ export function bookingActionPageHtml(params: {
   bodyHtml: string;
   baseUrl: string;
 }): string {
-  const subtitle = params.subtitle ? `<p class="subtitle">${escapeHtml(params.subtitle)}</p>` : "";
+  const subtitle = params.subtitle
+    ? `<p class="subtitle">${escapeHtml(params.subtitle)}</p>`
+    : '';
   return `<!doctype html>
 <html>
 <head>
@@ -589,12 +689,12 @@ export function actionResultWithBackHtml(params: {
   baseUrl?: string;
 }): string {
   const ok = params.ok !== false;
-  const bodyHtml = `<div class="panel"><p class="${ok ? "ok" : "danger"}" style="margin:0;font-weight:700">${escapeHtml(params.message)}</p></div>`;
+  const bodyHtml = `<div class="panel"><p class="${ok ? 'ok' : 'danger'}" style="margin:0;font-weight:700">${escapeHtml(params.message)}</p></div>`;
   return bookingActionPageHtml({
     title: params.title,
-    subtitle: "Booking action result",
+    subtitle: 'Booking action result',
     bodyHtml,
-    baseUrl: params.baseUrl || "/",
+    baseUrl: params.baseUrl || '/',
   });
 }
 
@@ -612,7 +712,7 @@ export function rescheduleFormHtml(params: {
   const bodyHtml = `
     <div class="panel" style="margin-bottom:12px">
       <p style="margin:0 0 8px;font-weight:700">Current schedule</p>
-      <p class="muted" style="margin:0">${escapeHtml(params.currentDate)} ${escapeHtml(params.currentTime || "")}</p>
+      <p class="muted" style="margin:0">${escapeHtml(params.currentDate)} ${escapeHtml(params.currentTime || '')}</p>
       <p class="muted" style="margin:10px 0 0">${escapeHtml(params.availabilityText)}</p>
     </div>
 
@@ -638,8 +738,8 @@ export function rescheduleFormHtml(params: {
   `;
 
   return bookingActionPageHtml({
-    title: "Reschedule Booking",
-    subtitle: "Choose a new schedule based on barber availability",
+    title: 'Reschedule Booking',
+    subtitle: 'Choose a new schedule based on barber availability',
     bodyHtml,
     baseUrl: params.baseUrl,
   });

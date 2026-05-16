@@ -61,7 +61,7 @@ export async function adminUpdateBookingStatus(
 
 export async function adminRescheduleBooking(
   id: string,
-  data: { date: string; time: string }
+  data: { date: string; time: string; reason: string }
 ): Promise<void> {
   await adminRequest(
     'PATCH',

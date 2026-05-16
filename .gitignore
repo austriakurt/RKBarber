@@ -9,3 +9,4 @@ vite.config.ts.*
 *.tar.gz
 diagrams
 server/*firebase-adminsdk*.json
+.helm-diag/

@@ -65,7 +65,11 @@ async function requireAdmin(
 function getPathSegments(req: any): string[] {
   const raw = req.query?.path;
   if (Array.isArray(raw)) return raw.map((s: any) => String(s).trim());
-  if (typeof raw === 'string') return raw.split('/').map((s) => s.trim()).filter(Boolean);
+  if (typeof raw === 'string')
+    return raw
+      .split('/')
+      .map((s) => s.trim())
+      .filter(Boolean);
   // Fallback: parse from URL
   const url = String(req.url || '');
   const match = url.match(/\/api\/admin\/(.+?)(\?|$)/);
@@ -208,7 +212,10 @@ async function handleSettings(req: any, res: any) {
   }
 
   const { adminDb } = getFirebaseAdminServices();
-  await adminDb.collection('settings').doc('shop').set(payload, { merge: true });
+  await adminDb
+    .collection('settings')
+    .doc('shop')
+    .set(payload, { merge: true });
   res.status(200).json(payload);
 }
 
@@ -237,7 +244,10 @@ async function handleQueue(req: any, res: any, segments: string[]) {
     }
 
     if (payload.position !== undefined) {
-      if (!Number.isInteger(payload.position) || Number(payload.position) <= 0) {
+      if (
+        !Number.isInteger(payload.position) ||
+        Number(payload.position) <= 0
+      ) {
         res.status(400).json({ message: 'Invalid queue position' });
         return;
       }
@@ -271,13 +281,18 @@ async function handleBookings(req: any, res: any, segments: string[]) {
   if (req.method === 'GET' && !id) {
     const { adminDb } = getFirebaseAdminServices();
     const date = String(req.query?.date || '').trim();
-    const snapshot = await adminDb.collection('bookings').orderBy('createdAt', 'desc').get();
+    const snapshot = await adminDb
+      .collection('bookings')
+      .orderBy('createdAt', 'desc')
+      .get();
     const bookings = snapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...(doc.data() as Record<string, unknown>),
     })) as Array<{ id: string; date?: unknown } & Record<string, unknown>>;
 
-    const filtered = date ? bookings.filter((booking) => booking.date === date) : bookings;
+    const filtered = date
+      ? bookings.filter((booking) => booking.date === date)
+      : bookings;
     res.status(200).json(filtered);
     return;
   }
@@ -297,6 +312,8 @@ async function handleBookings(req: any, res: any, segments: string[]) {
     const status = payload.status;
     const date = typeof payload.date === 'string' ? payload.date.trim() : '';
     const time = typeof payload.time === 'string' ? payload.time.trim() : '';
+    const reason =
+      typeof payload.reason === 'string' ? payload.reason.trim() : '';
 
     const hasStatus = typeof status === 'string' && status.length > 0;
     const hasReschedule = date.length > 0 || time.length > 0;
@@ -305,8 +322,25 @@ async function handleBookings(req: any, res: any, segments: string[]) {
       return;
     }
 
+    if (hasReschedule && !reason) {
+      res.status(400).json({ message: 'Reschedule reason is required' });
+      return;
+    }
+
+    if (reason.length > 255) {
+      res
+        .status(400)
+        .json({ message: 'Reschedule reason must be 255 characters or less' });
+      return;
+    }
+
     if (hasStatus) {
-      const allowed = new Set(['pending', 'confirmed', 'cancelled', 'completed']);
+      const allowed = new Set([
+        'pending',
+        'confirmed',
+        'cancelled',
+        'completed',
+      ]);
       if (!allowed.has(status)) {
         res.status(400).json({ message: 'Invalid booking status' });
         return;
@@ -318,9 +352,16 @@ async function handleBookings(req: any, res: any, segments: string[]) {
     if (date.length > 0) updates.date = date;
     if (time.length > 0) updates.time = time;
 
-
-    if (status === 'confirmed' && existing.type === 'reservation' && String(existing.status || '') === 'completed') {
-      res.status(409).json({ message: 'Completed bookings cannot be moved back to confirmed.' });
+    if (
+      status === 'confirmed' &&
+      existing.type === 'reservation' &&
+      String(existing.status || '') === 'completed'
+    ) {
+      res
+        .status(409)
+        .json({
+          message: 'Completed bookings cannot be moved back to confirmed.',
+        });
       return;
     }
 
@@ -375,11 +416,15 @@ async function handleBookings(req: any, res: any, segments: string[]) {
 
     if (hasReschedule) {
       updates.rescheduledAt = nowIso;
+      updates.rescheduleReason = reason;
     }
 
     await bookingRef.set(updates, { merge: true });
 
-    let emailResult: { sent: boolean; reason?: string } = { sent: false, reason: 'No status email sent' };
+    let emailResult: { sent: boolean; reason?: string } = {
+      sent: false,
+      reason: 'No status email sent',
+    };
     const toEmail = String(existing.email || '').trim();
 
     if (notificationStatus && toEmail.includes('@')) {
@@ -394,6 +439,7 @@ async function handleBookings(req: any, res: any, segments: string[]) {
         time: nextTime,
         price: Number(existing.price || 0),
         status: notificationStatus,
+        rescheduleReason: hasReschedule ? reason : undefined,
         previousSchedule: hasReschedule
           ? {
               date: String(existing.date || ''),
@@ -411,7 +457,10 @@ async function handleBookings(req: any, res: any, segments: string[]) {
       } catch (error) {
         emailResult = {
           sent: false,
-          reason: error instanceof Error ? error.message : 'Failed to send booking status email',
+          reason:
+            error instanceof Error
+              ? error.message
+              : 'Failed to send booking status email',
         };
       }
 
@@ -424,7 +473,14 @@ async function handleBookings(req: any, res: any, segments: string[]) {
       );
     }
 
-    res.status(200).json({ id, ...updates, emailSent: emailResult.sent, emailReason: emailResult.reason || '' });
+    res
+      .status(200)
+      .json({
+        id,
+        ...updates,
+        emailSent: emailResult.sent,
+        emailReason: emailResult.reason || '',
+      });
     return;
   }
 
@@ -475,7 +531,8 @@ export default async function handler(req: any, res: any) {
     }
   } catch (error) {
     console.error(`admin ${resource} operation failed`, error);
-    const message = error instanceof Error ? error.message : 'Admin operation failed';
+    const message =
+      error instanceof Error ? error.message : 'Admin operation failed';
     res.status(500).json({ message });
   }
 }
